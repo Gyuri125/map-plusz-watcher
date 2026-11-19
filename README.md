@@ -446,7 +446,7 @@ allampapir_ertesito/
   notifiers/        discord, telegram, ntfy, email, webhook, windows, console
 tests/              unittest tesztek
 scripts/            helyi Windows ütemező és futtató szkriptek
-docs/               README-hez tartozó minta kép
+docs/               minta kép és social preview
 .github/workflows/  GitHub Actions: ellenőrzés + tesztek
 config.example.toml helyi beállításminta
 config.ci.toml      GitHub Actions beállítás (titkok nélkül)
