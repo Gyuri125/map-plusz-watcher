@@ -8,7 +8,6 @@ import re
 import urllib.error
 import urllib.request
 
-from ..calendar import PUBLIC_URL
 from ..config import TelegramSettings
 from ..messages import PRODUCT_PAGE, WEBKINCSTAR_URL
 from ..models import Message
@@ -21,9 +20,15 @@ _LABEL_LINE = re.compile(r"^(\s*)([^:\n]{1,60}):\s*(.*)$")
 class TelegramNotifier(Notifier):
     name = "telegram"
 
-    def __init__(self, settings: TelegramSettings, timeout: int = 30) -> None:
+    def __init__(
+        self,
+        settings: TelegramSettings,
+        timeout: int = 30,
+        public_url: str = "",
+    ) -> None:
         self.settings = settings
         self.timeout = timeout
+        self.public_url = public_url.rstrip("/") + "/" if public_url else ""
 
     def send(self, message: Message) -> None:
         settings = self.settings
@@ -112,8 +117,7 @@ class TelegramNotifier(Notifier):
                 lines.append(html.escape(line))
         return "\n".join(lines)
 
-    @staticmethod
-    def _keyboard(message: Message) -> list[list[dict[str, str]]]:
+    def _keyboard(self, message: Message) -> list[list[dict[str, str]]]:
         series = message.series
         if series is None:
             return []
@@ -122,14 +126,14 @@ class TelegramNotifier(Notifier):
         ]
         if series.pdf_url:
             first_row.append({"text": "Ajánlattétel", "url": series.pdf_url})
-        return [
-            first_row,
-            [
-                {"text": "Dashboard", "url": PUBLIC_URL},
-                {"text": "Naptárba", "url": f"{PUBLIC_URL}map-plusz.ics"},
-                {"text": "AKK termékoldal", "url": PRODUCT_PAGE},
-            ],
-        ]
+        second_row: list[dict[str, str]] = []
+        if self.public_url:
+            second_row.append({"text": "Dashboard", "url": self.public_url})
+            second_row.append(
+                {"text": "Naptárba", "url": f"{self.public_url}map-plusz.ics"}
+            )
+        second_row.append({"text": "AKK termékoldal", "url": PRODUCT_PAGE})
+        return [first_row, second_row]
 
     def _redact(self, text: str) -> str:
         token = self.settings.bot_token

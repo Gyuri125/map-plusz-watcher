@@ -218,6 +218,57 @@ def build_first_run(
     )
 
 
+def build_status(
+    active: SeriesInfo | None,
+    upcoming: list[SeriesInfo],
+    today: date | None = None,
+) -> Message:
+    date_part = f" – {format_date_hu(today).rstrip('.')}" if today else ""
+    title = f"MÁP+ helyzetjelentés{date_part}"
+    lines = ["Aktuális MÁP+ helyzet.", ""]
+    if active:
+        lines.append("Jelenleg kapható:")
+        lines.extend(_series_details(active, today=today))
+        lines.append("")
+    else:
+        lines.append("Jelenleg nincs forgalmazás alatt álló MÁP+ sorozat.")
+        lines.append("")
+
+    if upcoming:
+        lines.append("Hamarosan indul:")
+        for series in upcoming:
+            lines.extend(
+                _series_details(
+                    series,
+                    include_published=True,
+                    today=today,
+                )
+            )
+            lines.append("")
+    else:
+        lines.append("Nincs kihirdetett következő sorozat a figyelt időszakban.")
+        lines.append("")
+
+    if active:
+        lines.append(PAYMENT_NOTE)
+        lines.append("")
+    lines.extend(_purchase_lines())
+    lines.append("")
+    series_for_message = active or (upcoming[0] if upcoming else None)
+    if series_for_message is not None:
+        lines.extend(_info_lines(series_for_message))
+    else:
+        lines.append(f"MÁP+ termékoldal: {PRODUCT_PAGE}")
+    lines.append("")
+    lines.append(_disclaimer())
+    return Message(
+        event="status",
+        title=title,
+        body="\n".join(lines).strip(),
+        series=series_for_message,
+    )
+
+
 def build_reminder(
     series: SeriesInfo,
     reminder_text: str,

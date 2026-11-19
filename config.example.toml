@@ -43,6 +43,11 @@ announce_horizon_days = 120
 # HTTP időtúllépés másodpercben.
 http_timeout_seconds = 30
 
+# Nyilvános dashboard URL. Ha üres, a Discord/Telegram üzenetben nem
+# jelenik meg Dashboard/Naptárba gomb. GitHub Pages használatakor:
+# public_url = "https://gyuri125.github.io/map-plusz-watcher/"
+public_url = ""
+
 
 # ------------------------------------------------------------
 #  Értesítési csatornák

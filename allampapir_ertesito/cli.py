@@ -8,13 +8,14 @@ import logging.handlers
 import shutil
 import sys
 import time
+import webbrowser
 from pathlib import Path
 
 from . import __version__
 from .akk import AkkClient, AkkError
 from .config import Config, ConfigError, load_config
 from .dashboard import DashboardError, build_data, write_dashboard
-from .messages import build_test
+from .messages import build_status, build_test
 from .models import CheckOutcome, Offering, RetailSeries, SeriesInfo
 from .monitor import (
     Monitor,
@@ -267,7 +268,12 @@ def run_status(config: Config, offline: bool) -> int:
     return 0
 
 
-def run_dashboard(config: Config, output: str) -> int:
+def run_dashboard(
+    config: Config,
+    output: str,
+    show_calculator: bool = True,
+    open_browser: bool = False,
+) -> int:
     logger = logging.getLogger(LOGGER_NAME)
     client = AkkClient(timeout=config.app.http_timeout_seconds)
     try:
@@ -281,12 +287,72 @@ def run_dashboard(config: Config, output: str) -> int:
     if not output_dir.is_absolute():
         output_dir = (Path.cwd() / output_dir).resolve()
     try:
-        index_path = write_dashboard(data, config, output_dir)
+        index_path = write_dashboard(
+            data,
+            config,
+            output_dir,
+            show_calculator=show_calculator,
+        )
     except OSError as exc:
         logger.error("A dashboard írása sikertelen: %s", exc)
         return 1
     logger.info("Dashboard elkészült: %s", index_path)
     print(f"Dashboard: {index_path}")
+    if open_browser:
+        webbrowser.open(index_path.resolve().as_uri())
+    return 0
+
+
+def run_quick(
+    config: Config,
+    *,
+    make_dashboard: bool,
+    open_browser: bool,
+    show_calculator: bool,
+    output: str,
+) -> int:
+    logger = logging.getLogger(LOGGER_NAME)
+    client = AkkClient(timeout=config.app.http_timeout_seconds)
+    try:
+        data = build_data(client, config)
+    except DashboardError as exc:
+        logger.error("A helyzetjelentéshez nem sikerült adatot szerezni: %s", exc)
+        return 1
+    if data.source_errors:
+        logger.warning("Részleges adatlekérési hiba: %s", "; ".join(data.source_errors))
+
+    today = data.generated_at.date()
+    manager = NotifierManager(build_notifiers(config))
+    message = build_status(data.active, data.upcoming, today=today)
+    print("Helyzetjelentés küldése: " + ", ".join(manager.names))
+    result = manager.send(message)
+    for name in result.successes:
+        print(f"  [OK]   {name}")
+    for name, error in result.failures:
+        print(f"  [HIBA] {name}: {error}")
+
+    index_path = None
+    if make_dashboard or open_browser:
+        output_dir = Path(output)
+        if not output_dir.is_absolute():
+            output_dir = (Path.cwd() / output_dir).resolve()
+        try:
+            index_path = write_dashboard(
+                data,
+                config,
+                output_dir,
+                show_calculator=show_calculator,
+            )
+        except OSError as exc:
+            logger.error("A dashboard írása sikertelen: %s", exc)
+            return 1
+        print(f"Dashboard: {index_path}")
+        if open_browser:
+            webbrowser.open(index_path.resolve().as_uri())
+
+    if not result.delivered:
+        logger.error("A helyzetjelentés egy csatornára sem ment ki.")
+        return 1
     return 0
 
 
@@ -410,6 +476,42 @@ def build_parser() -> argparse.ArgumentParser:
         default="site",
         help="Kimeneti mappa (alapértelmezés: site).",
     )
+    dashboard.add_argument(
+        "--no-calculator",
+        action="store_true",
+        help="A hozamkalkulátor elhagyása a generált oldalról.",
+    )
+    dashboard.add_argument(
+        "--open",
+        action="store_true",
+        help="A generált dashboard megnyitása a böngészőben.",
+    )
+
+    quick = subparsers.add_parser(
+        "quick",
+        help="Azonnali helyzetjelentés a webhookra, opcionálisan helyi dashboarddal.",
+    )
+    add_common(quick)
+    quick.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="Helyi dashboard generálása is.",
+    )
+    quick.add_argument(
+        "--open",
+        action="store_true",
+        help="A generált dashboard megnyitása böngészőben (dashboardot is generál).",
+    )
+    quick.add_argument(
+        "--no-calculator",
+        action="store_true",
+        help="A hozamkalkulátor elhagyása a helyi dashboardról.",
+    )
+    quick.add_argument(
+        "--output",
+        default="site",
+        help="Dashboard kimeneti mappa (alapértelmezés: site).",
+    )
 
     setup = subparsers.add_parser(
         "setup",
@@ -452,7 +554,20 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "status":
             return run_status(config, offline=args.offline)
         if args.command == "dashboard":
-            return run_dashboard(config, args.output)
+            return run_dashboard(
+                config,
+                args.output,
+                show_calculator=not args.no_calculator,
+                open_browser=args.open,
+            )
+        if args.command == "quick":
+            return run_quick(
+                config,
+                make_dashboard=args.dashboard or args.open,
+                open_browser=args.open,
+                show_calculator=not args.no_calculator,
+                output=args.output,
+            )
         parser.error(f"Ismeretlen parancs: {args.command}")
         return 2
     except ConfigError as exc:

@@ -7,7 +7,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from ..calendar import PUBLIC_URL
 from ..config import DiscordSettings
 from ..messages import (
     PAYMENT_NOTE,
@@ -33,9 +32,15 @@ _COLORS = {
 class DiscordNotifier(Notifier):
     name = "discord"
 
-    def __init__(self, settings: DiscordSettings, timeout: int = 30) -> None:
+    def __init__(
+        self,
+        settings: DiscordSettings,
+        timeout: int = 30,
+        public_url: str = "",
+    ) -> None:
         self.settings = settings
         self.timeout = timeout
+        self.public_url = public_url.rstrip("/") + "/" if public_url else ""
 
     def send(self, message: Message) -> None:
         if not self.settings.webhook_url:
@@ -101,8 +106,8 @@ class DiscordNotifier(Notifier):
             embed["description"] = self._truncate(message.body, 4096)
             return embed
 
-        if message.event == "first_run":
-            # Az első összefoglaló egyszerre mutatja az aktív és a következő
+        if message.event in {"first_run", "status"}:
+            # Az összefoglaló egyszerre mutatja az aktív és a következő
             # sorozatot, ezért itt a teljes szöveg a legjobb.
             embed["description"] = self._truncate(message.body, 4096)
             embed["url"] = series.pdf_url or PRODUCT_PAGE
@@ -166,8 +171,9 @@ class DiscordNotifier(Notifier):
         links = [f"[WebKincstár]({WEBKINCSTAR_URL})"]
         if series.pdf_url:
             links.append(f"[Ajánlattétel]({series.pdf_url})")
-        links.append(f"[Dashboard]({PUBLIC_URL})")
-        links.append(f"[Naptárba]({PUBLIC_URL}map-plusz.ics)")
+        if self.public_url:
+            links.append(f"[Dashboard]({self.public_url})")
+            links.append(f"[Naptárba]({self.public_url}map-plusz.ics)")
         links.append(f"[AKK termékoldal]({PRODUCT_PAGE})")
         fields.extend(
             [
@@ -203,8 +209,7 @@ class DiscordNotifier(Notifier):
                 return text
         return None
 
-    @staticmethod
-    def _build_buttons(message: Message) -> list[dict[str, object]]:
+    def _build_buttons(self, message: Message) -> list[dict[str, object]]:
         series = message.series
         if series is None:
             return []
@@ -225,22 +230,23 @@ class DiscordNotifier(Notifier):
                     "url": series.pdf_url,
                 }
             )
-        buttons.append(
-            {
-                "type": 2,
-                "style": 5,
-                "label": "Dashboard",
-                "url": PUBLIC_URL,
-            }
-        )
-        buttons.append(
-            {
-                "type": 2,
-                "style": 5,
-                "label": "Naptárba",
-                "url": f"{PUBLIC_URL}map-plusz.ics",
-            }
-        )
+        if self.public_url:
+            buttons.append(
+                {
+                    "type": 2,
+                    "style": 5,
+                    "label": "Dashboard",
+                    "url": self.public_url,
+                }
+            )
+            buttons.append(
+                {
+                    "type": 2,
+                    "style": 5,
+                    "label": "Naptárba",
+                    "url": f"{self.public_url}map-plusz.ics",
+                }
+            )
         buttons.append(
             {
                 "type": 2,

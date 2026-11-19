@@ -27,6 +27,9 @@ timezone = "Europe/Budapest"
 lookback_days = 730
 announce_horizon_days = 120
 http_timeout_seconds = 30
+# Ha a GitHub Pages dashboard él, állítsd be:
+# public_url = "https://gyuri125.github.io/map-plusz-watcher"
+public_url = ""
 
 # A CI-ben nem írunk a nyilvános action logba teljes üzenetet.
 [notifiers.console]

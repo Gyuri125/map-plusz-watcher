@@ -32,6 +32,7 @@ class AppSettings:
     lookback_days: int = 730
     announce_horizon_days: int = 120
     http_timeout_seconds: int = 30
+    public_url: str = ""
 
 
 @dataclass
@@ -340,6 +341,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         http_timeout_seconds=_as_int(
             app_raw.get("http_timeout_seconds"), 30, "app.http_timeout_seconds"
         ),
+        public_url=_as_str(app_raw.get("public_url"), "").rstrip("/"),
     )
 
     console = ConsoleSettings(

@@ -19,10 +19,15 @@ A cél, hogy időben tudd:
 - **mit tud** a termék (futamidő, kamatozás, címlet, kamatfizetés),
 - melyik hivatalos dokumentumban vannak a részletek.
 
-Az értesítések **Discordra és Telegramra** mennek. A figyelő GitHub Actions
-alatt fut, ingyenes nyilvános repóban, naponta kétszer. A böngészős
-dashboard, a kamatgrafikon, az összehasonlítás, a kalkulátor és a
-naptárletöltés GitHub Pages alatt érhető el.
+Az értesítések **Discordra és Telegramra** mennek. A figyelő helyben,
+egyetlen paranccsal vagy a `scripts\run_local.bat` dupla kattintásával
+futtatható; az értesítő és dashboard GitHub Actions workflow-k
+opcionálisak és manuálisak. A tesztek push/PR esetén automatikusan futnak.
+A dashboard, a kamatgrafikon, az összehasonlítás és a naptárletöltés
+helyben is elérhető, GitHub Pages használatával pedig online is.
+
+Helyi gyors használat: `python -m allampapir_ertesito setup` (Discord igen,
+Telegram nem), majd `scripts\run_local.bat` dupla kattintás.
 
 ![MÁP+ értesítés mintája Discordon](docs/discord-preview.png)
 
@@ -71,13 +76,17 @@ Discordon ugyanez **mezőkre bontott kártyaként** jelenik meg, a fontos
 adatokkal és kattintható gombokkal. A Telegram-üzenetben a címkék
 félkövérek, alatta szintén gombok vannak.
 
-## Dashboard (GitHub Pages)
+## Dashboard (helyben vagy GitHub Pages)
+
+Helyben a `scripts\run_local.bat` vagy a `quick --dashboard --open`
+parancs generálja és nyitja meg. A GitHub Pages csak akkor kell, ha
+online is el akarod érni.
 
 ![MÁP+ dashboard](docs/dashboard-preview.png)
 
 *Minta a dashboardból. A teljes, mindig friss oldal a Pages alatt érhető el.*
 
-A GitHub Pages dashboard ugyanezt az adatot mutatja böngészőben:
+A dashboard ugyanezt az adatot mutatja böngészőben:
 
 - aktuális MÁP+ sorozat a legfontosabb adatokkal,
 - a következő sorozat és a kezdésig hátralévő idő,
@@ -91,11 +100,12 @@ A GitHub Pages dashboard ugyanezt az adatot mutatja böngészőben:
 
 *Az összehasonlító táblázat és a hozamkalkulátor a dashboard alsó részén.*
 
-A dashboardot a `Dashboard` workflow generálja, és GitHub Pages artifactként
-publikálja, nem commitol a repóba. A naptárfájl a dashboardról tölthető le:
-`map-plusz.ics`. A Discord és Telegram **Dashboard** gombja a weboldalra,
-a **Naptárba** gombja pedig erre a fájlra mutat, ezért ezek a Pages
-engedélyezése után válnak elérhetővé.
+A dashboard alapból helyben készül el. Ha online is szeretnéd, a
+`Dashboard` workflow manuálisan publikálja GitHub Pages artifactként,
+nem commitol a repóba. A naptárfájl a dashboardról tölthető le:
+`map-plusz.ics`. A Discord és Telegram **Dashboard** gombja csak akkor
+jelenik meg, ha az `[app] public_url` be van állítva; a **Naptárba**
+gomb szintén ehhez a nyilvános címhez kötődik.
 
 A Pages első engedélyezése kézi lépés:
 
@@ -128,9 +138,10 @@ Kétfázisú értesítés:
 - **Kihirdetés:** az ÁKK megjelenteti a következő sorozatot.
 - **Indulás:** elérkezik a vásárlási időszak kezdete.
 
-Az ismételt értesítéseket a `state.json` állapotfájl akadályozza meg.
-GitHub Actions alatt ez az állapot az **Actions cache-ben** tárolódik,
-nem commitolódik a repóba.
+Az automatikus ellenőrzésnél az ismételt értesítéseket a `state.json`
+állapotfájl akadályozza meg. GitHub Actions alatt ez az állapot az
+**Actions cache-ben** tárolódik, nem commitolódik a repóba. A helyi
+`quick` parancs szándékosan minden futáskor elküldi a helyzetjelentést.
 
 > Az ÁKK adatforrása nem dokumentált, nyilvános API. Ha az ÁKK változtat
 > rajta, a program hibát jelez a naplóban; ilyenkor a forráskódban a
@@ -141,8 +152,9 @@ nem commitolódik a repóba.
 ## GitHub Actions beállítása
 
 A repó: [Gyuri125/map-plusz-watcher](https://github.com/Gyuri125/map-plusz-watcher).
-A figyelő GitHub Actions alatt fut; a nyilvános repóban a standard runner
-ingyenes. Ha forkoltad a repót, a secretöket a saját forkodban állítsd be.
+A helyi futtatás az elsődleges. A GitHub Actions workflow-k opcionálisak:
+kézzel indíthatók, és alapból nem futnak automatikusan. Ha forkoltad a
+repót, a secretöket a saját forkodban állítsd be.
 
 ### 1. Secretök beállítása
 
@@ -171,17 +183,14 @@ Az első futás egy összefoglalót küld a jelenleg kapható és a hamarosan
 induló sorozatokról. Ezután már csak akkor küld, ha új sorozat jelenik meg,
 vagy egy sorozat vásárolhatóvá válik.
 
-### 3. Ütemezés
+### 3. Futtatás
 
-A workflow a `.github/workflows/map-plusz-check.yml` fájlban van. A
-beállított ütemezés UTC szerint:
+A workflow a `.github/workflows/map-plusz-check.yml` fájlban van, és
+alapból **manuális**: Actions > MÁP+ ellenőrzés > Run workflow.
 
-- **06:00 UTC** = 07:00/08:00 Magyarországon (nyári/téli időszámtól függően)
-- **15:00 UTC** = 16:00/17:00 Magyarországon
-
-A délutáni futás elkapja az ÁKK aznapi kihirdetéseit, a reggeli pedig az
-indulás napján időben szól. A GitHub Actions ütemezett futásai néhány
-percet késhetnek nagy terhelés esetén.
+Ha mégis napi automatikus futást szeretnél, a workflow fájljában van egy
+kommentelt `schedule` blokk; azt kell visszakapcsolni. A helyi
+`run_local.bat` ettől függetlenül bármikor futtatható.
 
 ### 4. Állapot és cache
 
@@ -210,7 +219,7 @@ esetén:
 
 Ez nem küld értesítést, nem kellenek hozzá secretök.
 
-### 6. Dashboard (GitHub Pages)
+### 6. Dashboard (opcionális GitHub Pages)
 
 A dashboardhoz nem kell secret. A workflow:
 
@@ -222,10 +231,14 @@ A Pages forrást állítsd **GitHub Actions**-ra:
 
 **Settings > Pages > Build and deployment > Source: GitHub Actions**
 
-Utána az **Actions > Dashboard > Run workflow** paranccsal azonnal
-publikálhatod, vagy várd meg a 06:15 / 15:15 UTC-s ütemezett futást.
-A dashboard a `config.site.toml` fájlt használja, amely nem tartalmaz
-titkot, és a generált `site/` mappát artifactként tölti fel.
+Utána az **Actions > Dashboard > Run workflow** paranccsal publikálhatod.
+A workflow alapból manuális; ha napi automatikus frissítést szeretnél,
+a kommentelt `schedule` blokkot kapcsold vissza. A dashboard a
+`config.site.toml` fájlt használja, amely nem tartalmaz titkot, és a
+generált `site/` mappát artifactként tölti fel.
+
+Helyben ugyanez a `python -m allampapir_ertesito dashboard` paranccsal
+vagy a `scripts\run_local.bat`-tal érhető el.
 
 ---
 
@@ -276,6 +289,24 @@ WebKincstár, ajánlattétel, dashboard, naptár és termékoldal gombok
 jelennek meg.
 
 ---
+
+## Helyi egygombos futtatás
+
+Ez a leggyorsabb út, ha csak a saját gépedről szeretnél egy pillantást
+és egy Discord-értesítést:
+
+1. `python -m allampapir_ertesito setup` – Discord igen, Telegram nem.
+2. Dupla kattintás: `scripts\run_local.bat`
+
+Ez elküldi a helyzetjelentést a Discord webhookra, legenerálja a helyi
+dashboardot kalkulátor nélkül, és megnyitja a böngészőben.
+
+Csak a webhookra: `scripts\run_webhook.bat`, vagy közvetlenül:
+`python -m allampapir_ertesito quick`.
+
+A `quick` minden futáskor elküldi az aktuális helyzetet, nem használ
+duplikációvédelmet. A helyi dashboard a `site/index.html` fájlban jön
+létre.
 
 ## Helyi használat
 
@@ -364,11 +395,12 @@ A részletek a szkript fejlécében és a `scripts/` mappában vannak.
 A dashboard helyben is legenerálható:
 
 ```powershell
-python -m allampapir_ertesito dashboard --config config.site.toml --output site
+python -m allampapir_ertesito dashboard --config config.site.toml --output site --no-calculator --open
 ```
 
-Utána nyisd meg a `site/index.html` fájlt. A `site/map-plusz.ics` a
-naptárfájl. A `site/` mappa a `.gitignore` miatt nem kerül a repóba.
+A `--no-calculator` elhagyja a hozamkalkulátort, az `--open` pedig
+megnyitja a böngészőben. A `site/map-plusz.ics` a naptárfájl. A `site/`
+mappa a `.gitignore` miatt nem kerül a repóba.
 
 ---
 
@@ -390,6 +422,10 @@ Fontosabb `[app]` kulcsok:
 | `timezone` | `Europe/Budapest` | Az indulás/lezárás napjának értelmezése. |
 | `lookback_days` | `730` | Visszamenőleges adatlekérés. |
 | `announce_horizon_days` | `120` | Ennyi nappal előre jelezze a kihirdetett sorozatokat. |
+| `public_url` | `""` | Nyilvános dashboard URL. Ha üres, nincs Dashboard/Naptárba gomb. |
+
+Webhook-only helyi módban hagyd a `public_url` értékét üresen. Ha később
+GitHub Pages alá teszed a dashboardot, állítsd be a Pages URL-re.
 
 ### Értesítési csatornák
 
@@ -439,6 +475,9 @@ futásnak” számít, és összefoglalót küld.
 > Ne futtasd egyszerre a helyi `watch` módot és a GitHub Actions feladatot.
 > A duplikációvédelem a futás végén mentett állapoton alapul, ezért két
 > párhuzamos futás még küldhet ugyanarról a sorozatról értesítést.
+
+A kézi `quick` parancs ezzel szemben **minden futáskor** elküldi a
+helyzetjelentést, mert az egy szándékos „frissíts most” művelet.
 
 ---
 
@@ -498,12 +537,12 @@ Részletek: [`SECURITY.md`](SECURITY.md).
 - A GitHub Actions ütemezett futása néhány percet késhet.
 - A GitHub Actions cache 7 nap inaktivitás után törlődhet; ez legfeljebb
   egy plusz összefoglaló értesítést jelent.
-- A GitHub a **60 napig inaktív** repókban automatikusan letilthatja az
-  ütemezett workflow-kat. Ilyenkor az Actions oldalon engedélyezd újra,
-  és tölts fel egy apró commitot (vagy nyiss egy issue-t/PR-t), hogy a
-  repó ismét aktívnak számítson.
-- A dashboard és a naptár a GitHub Pages alatt érhető el; a Pages első
-  engedélyezése kézi lépés.
+- Ha bekapcsolod a cron ütemezést, a GitHub a **60 napig inaktív**
+  repókban automatikusan letilthatja az ütemezett workflow-kat. Ilyenkor
+  az Actions oldalon engedélyezd újra, és tölts fel egy apró commitot
+  (vagy nyiss egy issue-t/PR-t), hogy a repó ismét aktívnak számítson.
+- A dashboard és a naptár helyben is elérhető; a GitHub Pages publikálás
+  opcionális, és a Pages első engedélyezése kézi lépés.
 - A naptárfájl az aktuális és a már kihirdetett következő sorozatokat
   tartalmazza, a korábbiakat nem.
 - A hozamkalkulátor az első évi kamattal számoló becslés, nem teljes
@@ -531,7 +570,7 @@ allampapir_ertesito/
   util.py           formázás, segédfüggvények
   notifiers/        discord, telegram, ntfy, email, webhook, windows, console
 tests/              unittest tesztek
-scripts/            helyi Windows ütemező és futtató szkriptek
+scripts/            helyi futtató szkriptek (run_local.bat, run_webhook.bat)
 docs/               minta képek és social preview
 .github/workflows/  GitHub Actions: ellenőrzés, tesztek, dashboard
 config.example.toml helyi beállításminta
@@ -552,7 +591,7 @@ python -m unittest discover -s tests -t . -v
 A tesztek nem hálózatoznak; hamis adatokkal ellenőrzik a feldolgozást,
 a kétfázisú értesítést, a duplikációvédelmet, a Discord/Telegram payloadot,
 a `.env` betöltést, a dashboardot, a naptárfájlt, a setup segédfüggvényeit
-és az emlékeztetőt. Jelenleg 50 unittest fut.
+és az emlékeztetőt. Jelenleg 53 unittest fut.
 
 A GitHubon a `Tesztek` workflow push és pull request esetén automatikusan
 lefut Ubuntu és Windows alatt is.

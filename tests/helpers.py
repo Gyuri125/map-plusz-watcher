@@ -80,6 +80,7 @@ def make_config(tmp_path: Path, **overrides) -> Config:
         lookback_days=730,
         announce_horizon_days=120,
         http_timeout_seconds=30,
+        public_url="",
     )
     reminder = ReminderSettings(enabled=False, delay_hours=24, text="Fizesd be a vételárat.")
     config = Config(

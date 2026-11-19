@@ -7,6 +7,7 @@ from allampapir_ertesito.messages import (
     build_announcement,
     build_first_run,
     build_start,
+    build_status,
 )
 from allampapir_ertesito.models import SeriesInfo
 from allampapir_ertesito.util import series_name_key
@@ -57,6 +58,19 @@ class MessageTests(unittest.TestCase):
     def test_announcement_has_countdown(self) -> None:
         message = build_announcement(self._series(future=True), date(2026, 12, 28))
         self.assertIn("Kezdésig: 7 nap", message.body)
+
+    def test_status_message_lists_active_and_upcoming(self) -> None:
+        message = build_status(
+            self._series(),
+            [self._series(future=True)],
+            date(2026, 11, 19),
+        )
+        self.assertEqual(message.event, "status")
+        self.assertIn("helyzetjelentés", message.title)
+        self.assertIn("Jelenleg kapható", message.body)
+        self.assertIn("Hamarosan indul", message.body)
+        self.assertIn("2031/M6", message.body)
+        self.assertIn("2031/M7", message.body)
 
     def test_first_run_lists_active_and_upcoming(self) -> None:
         active = self._series()

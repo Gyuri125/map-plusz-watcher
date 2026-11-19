@@ -70,7 +70,7 @@ def _event(
     )
     uid = f"{_slug(series.name)}-{event_date.strftime('%Y%m%d')}@map-plusz-watcher"
     url = series.pdf_url or page_url
-    return [
+    lines = [
         "BEGIN:VEVENT",
         f"UID:{uid}",
         f"DTSTAMP:{stamp}",
@@ -78,16 +78,22 @@ def _event(
         f"DTEND;VALUE=DATE:{end_date.strftime('%Y%m%d')}",
         f"SUMMARY:{_escape(summary)}",
         f"DESCRIPTION:{_escape(description)}",
-        f"URL:{url}",
-        "STATUS:CONFIRMED",
-        "TRANSP:TRANSPARENT",
-        "BEGIN:VALARM",
-        "ACTION:DISPLAY",
-        f"DESCRIPTION:{_escape(summary)}",
-        "TRIGGER:-P1D",
-        "END:VALARM",
-        "END:VEVENT",
     ]
+    if url:
+        lines.append(f"URL:{url}")
+    lines.extend(
+        [
+            "STATUS:CONFIRMED",
+            "TRANSP:TRANSPARENT",
+            "BEGIN:VALARM",
+            "ACTION:DISPLAY",
+            f"DESCRIPTION:{_escape(summary)}",
+            "TRIGGER:-P1D",
+            "END:VALARM",
+            "END:VEVENT",
+        ]
+    )
+    return lines
 
 
 def build_ics(

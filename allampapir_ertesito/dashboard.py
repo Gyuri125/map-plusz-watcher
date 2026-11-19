@@ -338,7 +338,7 @@ def _sidebar(data: DashboardData, today: date) -> str:
         '<div class="kicker">Állapot</div>'
         f'<div class="row"><span>Utolsó frissítés</span><strong>{_e(format_datetime_hu(data.generated_at))}</strong></div>'
         '<div class="row"><span>Adatforrás</span><strong>ÁKK</strong></div>'
-        '<div class="row"><span>Frissítés</span><strong>naponta 2x</strong></div>'
+        '<div class="row"><span>Frissítés</span><strong>igény szerint</strong></div>'
         '<div class="row"><span>Automatizálás</span><strong>GitHub Actions</strong></div>'
         f'<p class="note"><a href="{_e(GITHUB_URL)}" target="_blank" rel="noopener">GitHub repó</a></p>'
         "</div>"
@@ -523,9 +523,24 @@ def _calculator(data: DashboardData) -> str:
     """
 
 
-def render_html(data: DashboardData, config: Config) -> str:
+def render_html(
+    data: DashboardData,
+    config: Config,
+    show_calculator: bool = True,
+) -> str:
     today = data.generated_at.date()
     calculator = _calculator(data)
+    calculator_nav = (
+        '<a href="#kalkulator">Kalkulátor</a>' if show_calculator else ""
+    )
+    calculator_section = (
+        '<section id="kalkulator" class="section card">'
+        '<div class="section-title"><h2>Hozamkalkulátor</h2>'
+        "<span>Becslés az első évi kamattal</span></div>"
+        f"{calculator}</section>"
+        if show_calculator
+        else ""
+    )
     warning = ""
     if data.source_errors:
         warning = (
@@ -551,7 +566,7 @@ def render_html(data: DashboardData, config: Config) -> str:
       <a href="#arak">Kamatok</a>
       <a href="#elozmenyek">Előzmények</a>
       <a href="#osszehasonlitas">Összehasonlítás</a>
-      <a href="#kalkulator">Kalkulátor</a>
+      {calculator_nav}
       <a href="{_e(GITHUB_URL)}" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </header>
@@ -574,10 +589,7 @@ def render_html(data: DashboardData, config: Config) -> str:
       {_comparison_table(data)}
       <p class="note">A többi termék adatai tájékoztató jellegűek. A MÁP+ részleteit a hivatalos nyilvános ajánlattétel tartalmazza.</p>
     </section>
-    <section id="kalkulator" class="section card">
-      <div class="section-title"><h2>Hozamkalkulátor</h2><span>Becslés az első évi kamattal</span></div>
-      {calculator}
-    </section>
+    {calculator_section}
   </main>
   <footer>
     <p>Az adatok tájékoztató jellegűek, nem befektetési tanács. Forrás: ÁKK nyilvános adatai. Vásárlás előtt ellenőrizd a hivatalos nyilvános ajánlattételt.</p>
@@ -594,13 +606,21 @@ def write_dashboard(
     data: DashboardData,
     config: Config,
     output_dir: Path,
+    show_calculator: bool = True,
 ) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     index_path = output_dir / "index.html"
-    index_path.write_text(render_html(data, config), encoding="utf-8")
+    index_path.write_text(
+        render_html(data, config, show_calculator=show_calculator),
+        encoding="utf-8",
+    )
 
     ics_series = ([data.active] if data.active else []) + data.upcoming
-    ics = build_ics(ics_series, generated_at=data.generated_at)
+    ics = build_ics(
+        ics_series,
+        generated_at=data.generated_at,
+        page_url=config.app.public_url,
+    )
     ics_path = output_dir / "map-plusz.ics"
     with ics_path.open("w", encoding="utf-8", newline="") as handle:
         handle.write(ics)

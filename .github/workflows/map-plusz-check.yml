@@ -1,12 +1,13 @@
 name: MÁP+ ellenőrzés
 
 on:
-  schedule:
-    # GitHub Actions UTC-ben érti az időpontokat.
-    # 06:00 UTC = 07:00/08:00 Magyarországon
-    # 15:00 UTC = 16:00/17:00 Magyarországon
-    - cron: "0 6 * * *"
-    - cron: "0 15 * * *"
+  # Alapból manuális. Automatikus futáshoz vedd fel a schedule blokkot:
+  # schedule:
+  #   # GitHub Actions UTC-ben érti az időpontokat.
+  #   # 06:00 UTC = 07:00/08:00 Magyarországon
+  #   # 15:00 UTC = 16:00/17:00 Magyarországon
+  #   - cron: "0 6 * * *"
+  #   - cron: "0 15 * * *"
   workflow_dispatch:
 
 permissions:

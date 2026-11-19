@@ -21,9 +21,21 @@ def build_notifiers(config: Config) -> list[Notifier]:
     if config.email.enabled:
         notifiers.append(EmailNotifier(config.email))
     if config.telegram.enabled:
-        notifiers.append(TelegramNotifier(config.telegram, timeout=timeout))
+        notifiers.append(
+            TelegramNotifier(
+                config.telegram,
+                timeout=timeout,
+                public_url=config.app.public_url,
+            )
+        )
     if config.discord.enabled:
-        notifiers.append(DiscordNotifier(config.discord, timeout=timeout))
+        notifiers.append(
+            DiscordNotifier(
+                config.discord,
+                timeout=timeout,
+                public_url=config.app.public_url,
+            )
+        )
     if config.ntfy.enabled:
         notifiers.append(NtfyNotifier(config.ntfy, timeout=timeout))
     if config.windows.enabled:

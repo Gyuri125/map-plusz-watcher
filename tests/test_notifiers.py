@@ -75,7 +75,9 @@ class NotifierTests(unittest.TestCase):
             chat_id="456",
             message_thread_id=7,
         )
-        TelegramNotifier(settings).send(sample_message())
+        TelegramNotifier(settings, public_url="https://example.com/app").send(
+            sample_message()
+        )
         request = urlopen.call_args[0][0]
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(payload["chat_id"], "456")
@@ -110,7 +112,9 @@ class NotifierTests(unittest.TestCase):
             webhook_url="https://discord.com/api/webhooks/123/abc",
             username="MÁP+ teszt",
         )
-        DiscordNotifier(settings).send(sample_message())
+        DiscordNotifier(settings, public_url="https://example.com/app").send(
+            sample_message()
+        )
         request = urlopen.call_args[0][0]
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(payload["username"], "MÁP+ teszt")
@@ -125,6 +129,20 @@ class NotifierTests(unittest.TestCase):
         self.assertIn("Dashboard", labels)
         self.assertIn("Naptárba", labels)
         self.assertIn("with_components=true", urlopen.call_args[0][0].full_url)
+
+    @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")
+    def test_discord_dashboard_buttons_require_public_url(self, urlopen) -> None:
+        urlopen.return_value = FakeResponse()
+        settings = DiscordSettings(
+            enabled=True,
+            webhook_url="https://discord.com/api/webhooks/123/abc",
+        )
+        DiscordNotifier(settings).send(sample_message())
+        payload = json.loads(urlopen.call_args[0][0].data.decode("utf-8"))
+        labels = [button["label"] for button in payload["components"][0]["components"]]
+        self.assertIn("WebKincstár", labels)
+        self.assertNotIn("Dashboard", labels)
+        self.assertNotIn("Naptárba", labels)
 
     @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")
     def test_discord_retries_without_components_on_400(self, urlopen) -> None:
@@ -165,7 +183,7 @@ class NotifierTests(unittest.TestCase):
             enabled=True,
             webhook_url="https://discord.com/api/webhooks/123/abc",
         )
-        DiscordNotifier(settings).send(message)
+        DiscordNotifier(settings, public_url="https://example.com/app").send(message)
         payload = json.loads(urlopen.call_args[0][0].data.decode("utf-8"))
         embed = payload["embeds"][0]
         self.assertIn("Kezdésig: 7 nap", embed["description"])

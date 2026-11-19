@@ -121,6 +121,13 @@ class DashboardTests(unittest.TestCase):
         self.assertNotIn("Nyomdai MÁP+", html)
         self.assertNotIn("BABA", html)
 
+    def test_render_without_calculator(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            config = make_config(Path(tmp))
+            html = render_html(self._data(), config, show_calculator=False)
+        self.assertNotIn("Hozamkalkulátor", html)
+        self.assertNotIn('id="kalkulator"', html)
+
     def test_write_dashboard_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             directory = Path(tmp)
