@@ -26,19 +26,6 @@ alatt fut, ingyenes nyilvános repóban, naponta kétszer.
 
 *Minta: a Discord-üzenet elrendezése. A linkek a valós értesítésben kattinthatók.*
 
-## Tartalom
-
-- [Mit tartalmaz az értesítés?](#mit-tartalmaz-az-értesítés)
-- [Hogyan működik?](#hogyan-működik)
-- [GitHub Actions beállítása](#github-actions-beállítása)
-- [Discord webhook beállítása](#discord-webhook-beállítása)
-- [Telegram bot beállítása](#telegram-bot-beállítása)
-- [Helyi használat](#helyi-használat)
-- [Beállítások](#beállítások)
-- [Hibakeresés](#hibakeresés)
-- [Biztonság](#biztonság)
-- [Licenc](#licenc)
-
 ---
 
 ## Mit tartalmaz az értesítés?
