@@ -87,6 +87,10 @@ A GitHub Pages dashboard ugyanezt az adatot mutatja böngészőben:
 - hozamkalkulátor a befektetett összeg alapján,
 - letölthető **naptárfájl** (`.ics`) az indulási és zárónapokkal.
 
+![Dashboard – összehasonlítás és hozamkalkulátor](docs/dashboard-calculator.png)
+
+*Az összehasonlító táblázat és a hozamkalkulátor a dashboard alsó részén.*
+
 A dashboardot a `Dashboard` workflow generálja, és GitHub Pages artifactként
 publikálja, nem commitol a repóba. A naptárfájl a dashboardról tölthető le:
 `map-plusz.ics`. A Discord és Telegram **Dashboard** gombja a weboldalra,
