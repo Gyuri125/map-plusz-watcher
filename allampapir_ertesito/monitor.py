@@ -218,7 +218,7 @@ class Monitor:
         # 3. Első futás: összefoglaló, majd az állapot beállítása.
         if first_run:
             if self.config.app.first_run_notify:
-                message = build_first_run(current_view, future_views)
+                message = build_first_run(current_view, future_views, today=today)
                 outcome.messages.append(message)
                 if self._dispatch(message, dry_run, outcome):
                     self._mark_first_run(state, current_view, future_views)
@@ -252,7 +252,7 @@ class Monitor:
                 forced_names.add(current_view.name)
             elif future_views:
                 target = future_views[0]
-                message = build_announcement(target)
+                message = build_announcement(target, today=today)
                 outcome.messages.append(message)
                 if self._dispatch(message, dry_run, outcome):
                     state.add_announced(target.name)
@@ -263,7 +263,7 @@ class Monitor:
             for view in future_views:
                 if view.name in forced_names or state.was_announced(view.name):
                     continue
-                message = build_announcement(view)
+                message = build_announcement(view, today=today)
                 outcome.messages.append(message)
                 if self._dispatch(message, dry_run, outcome):
                     state.add_announced(view.name)
@@ -331,7 +331,7 @@ class Monitor:
                 continue
             if reminder.due_at > now:
                 continue
-            message = build_reminder(reminder.series, reminder.text)
+            message = build_reminder(reminder.series, reminder.text, today=today)
             outcome.messages.append(message)
             logger.info("Esedékes emlékeztető: %s", reminder.series.name)
             if dry_run:

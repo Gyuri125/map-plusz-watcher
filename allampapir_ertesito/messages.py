@@ -47,11 +47,21 @@ def _date_range(series: SeriesInfo) -> str:
     return f"{start} – {format_date_hu(series.end)}"
 
 
+def _days_left(target: date, today: date) -> str:
+    days = (target - today).days
+    if days == 0:
+        return "ma"
+    if days == 1:
+        return "1 nap"
+    return f"{days} nap"
+
+
 def _series_details(
     series: SeriesInfo,
     *,
     include_isin: bool = True,
     include_published: bool = False,
+    today: date | None = None,
 ) -> list[str]:
     lines = [
         f"  Sorozat: {series.name}",
@@ -61,6 +71,11 @@ def _series_details(
     if include_published and series.published:
         lines.append(f"  Kihirdetve: {format_datetime_hu(series.published)}")
     lines.append(f"  Értékesítés: {_date_range(series)}")
+    if today is not None:
+        if series.start > today:
+            lines.append(f"  Kezdésig: {_days_left(series.start, today)}")
+        elif series.end is not None and series.end >= today:
+            lines.append(f"  Hátralévő idő: {_days_left(series.end, today)}")
     if series.maturity:
         lines.append(f"  Lejárat: {format_date_hu(series.maturity)}")
     rate = format_rate_range(series.rate)
@@ -100,12 +115,16 @@ def _disclaimer() -> str:
     )
 
 
-def build_announcement(series: SeriesInfo) -> Message:
+def build_announcement(series: SeriesInfo, today: date | None = None) -> Message:
     title = f"Új MÁP+ sorozat érkezik: {series.name}"
     lines = [
         "Az ÁKK kihirdette a következő MÁP+ sorozatot.",
         "",
-        *_series_details(series, include_published=True),
+        *_series_details(
+            series,
+            include_published=True,
+            today=today,
+        ),
         "",
         "A sorozat a fenti kezdőnaptól vásárolható a WebKincstárban, a Magyar "
         "Államkincstár irodáiban és a lakossági forgalmazóknál.",
@@ -134,7 +153,7 @@ def build_start(series: SeriesInfo, today: date) -> Message:
     lines = [
         intro,
         "",
-        *_series_details(series),
+        *_series_details(series, today=today),
         "",
         PAYMENT_NOTE,
         "",
@@ -150,6 +169,7 @@ def build_start(series: SeriesInfo, today: date) -> Message:
 def build_first_run(
     active: SeriesInfo | None,
     upcoming: list[SeriesInfo],
+    today: date | None = None,
 ) -> Message:
     title = "MÁP+ értesítő elindult"
     lines = [
@@ -161,7 +181,7 @@ def build_first_run(
     ]
     if active:
         lines.append("Jelenleg kapható:")
-        lines.extend(_series_details(active))
+        lines.extend(_series_details(active, today=today))
         lines.append("")
     else:
         lines.append("Jelenleg nincs forgalmazás alatt álló MÁP+ sorozat.")
@@ -170,7 +190,13 @@ def build_first_run(
     if upcoming:
         lines.append("Hamarosan indul:")
         for series in upcoming:
-            lines.extend(_series_details(series, include_published=True))
+            lines.extend(
+                _series_details(
+                    series,
+                    include_published=True,
+                    today=today,
+                )
+            )
             lines.append("")
 
     if active:
@@ -192,12 +218,20 @@ def build_first_run(
     )
 
 
-def build_reminder(series: SeriesInfo, reminder_text: str) -> Message:
+def build_reminder(
+    series: SeriesInfo,
+    reminder_text: str,
+    today: date | None = None,
+) -> Message:
     title = f"Vásárlási emlékeztető: {series.name} MÁP+"
     lines = [
         reminder_text.strip(),
         "",
-        *_series_details(series, include_isin=False),
+        *_series_details(
+            series,
+            include_isin=False,
+            today=today,
+        ),
         "",
         PAYMENT_NOTE,
         "",

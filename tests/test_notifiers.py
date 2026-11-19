@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import io
 import json
 import unittest
-from datetime import date
+import urllib.error
+from datetime import date, datetime
 from unittest.mock import patch
 
 from allampapir_ertesito.config import (
@@ -11,6 +13,7 @@ from allampapir_ertesito.config import (
     TelegramSettings,
     WebhookSettings,
 )
+from allampapir_ertesito.messages import build_announcement
 from allampapir_ertesito.models import Message, SeriesInfo
 from allampapir_ertesito.notifiers.discord import DiscordNotifier
 from allampapir_ertesito.notifiers.ntfy import NtfyNotifier
@@ -77,8 +80,25 @@ class NotifierTests(unittest.TestCase):
         payload = json.loads(request.data.decode("utf-8"))
         self.assertEqual(payload["chat_id"], "456")
         self.assertEqual(payload["message_thread_id"], 7)
-        self.assertIn("Új sorozat", payload["text"])
+        self.assertEqual(payload["parse_mode"], "HTML")
+        self.assertIn("<b>Új sorozat</b>", payload["text"])
+        buttons = [
+            button
+            for row in payload["reply_markup"]["inline_keyboard"]
+            for button in row
+        ]
+        labels = [button["text"] for button in buttons]
+        self.assertIn("WebKincstár", labels)
+        self.assertIn("Ajánlattétel", labels)
         self.assertIn("123:abc", request.full_url)
+
+    def test_telegram_html_label_formatting(self) -> None:
+        formatted = TelegramNotifier._format_html("  Kamat: 5,00% - 6,00%")
+        self.assertEqual(formatted, "  <b>Kamat:</b> 5,00% - 6,00%")
+        self.assertEqual(
+            TelegramNotifier._format_html("https://example.com"),
+            "https://example.com",
+        )
 
     @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")
     def test_discord_embed_payload(self, urlopen) -> None:
@@ -97,6 +117,60 @@ class NotifierTests(unittest.TestCase):
         self.assertIn("Új sorozat", embed["title"])
         self.assertIn("Részletek", embed["description"])
         self.assertTrue(embed["url"].endswith(".pdf"))
+        self.assertEqual(embed["fields"][0]["name"], "Sorozat")
+        labels = [button["label"] for button in payload["components"][0]["components"]]
+        self.assertIn("WebKincstár", labels)
+        self.assertIn("with_components=true", urlopen.call_args[0][0].full_url)
+
+    @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")
+    def test_discord_retries_without_components_on_400(self, urlopen) -> None:
+        error = urllib.error.HTTPError(
+            "https://discord.com/api/webhooks/123/abc?with_components=true",
+            400,
+            "Bad Request",
+            {},
+            io.BytesIO(b'{"message":"Invalid components"}'),
+        )
+        urlopen.side_effect = [error, FakeResponse()]
+        settings = DiscordSettings(
+            enabled=True,
+            webhook_url="https://discord.com/api/webhooks/123/abc",
+        )
+        DiscordNotifier(settings).send(sample_message())
+        self.assertEqual(urlopen.call_count, 2)
+        first_request = urlopen.call_args_list[0][0][0]
+        second_request = urlopen.call_args_list[1][0][0]
+        self.assertIn("with_components=true", first_request.full_url)
+        self.assertNotIn("with_components", second_request.full_url)
+        second_payload = json.loads(second_request.data.decode("utf-8"))
+        self.assertNotIn("components", second_payload)
+
+    @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")
+    def test_discord_real_announcement_has_countdown_and_fields(self, urlopen) -> None:
+        urlopen.return_value = FakeResponse()
+        offering = make_offering(
+            "2031/M7",
+            date(2027, 1, 4),
+            date(2027, 3, 31),
+            published=datetime(2026, 12, 28, 13, 30),
+        )
+        retail = make_retail("2031/M7", date(2027, 1, 4), date(2027, 3, 31))
+        series = SeriesInfo.from_offering(offering, retail)
+        message = build_announcement(series, date(2026, 12, 28))
+        settings = DiscordSettings(
+            enabled=True,
+            webhook_url="https://discord.com/api/webhooks/123/abc",
+        )
+        DiscordNotifier(settings).send(message)
+        payload = json.loads(urlopen.call_args[0][0].data.decode("utf-8"))
+        embed = payload["embeds"][0]
+        self.assertIn("Kezdésig: 7 nap", embed["description"])
+        names = [field["name"] for field in embed["fields"]]
+        self.assertIn("Kihirdetve", names)
+        self.assertIn("Linkek", names)
+        self.assertIn("Fizetés", names)
+        labels = [button["label"] for button in payload["components"][0]["components"]]
+        self.assertIn("Ajánlattétel", labels)
 
     @patch("allampapir_ertesito.notifiers.webhook.urllib.request.urlopen")
     def test_webhook_payload_contains_series(self, urlopen) -> None:

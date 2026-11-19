@@ -27,6 +27,7 @@ from .monitor import (
 )
 from .notifiers import NotifierManager, build_notifiers
 from .state import StateStore
+from .summary import write_github_summary
 from .util import (
     format_date_hu,
     format_datetime_hu,
@@ -101,6 +102,8 @@ def run_check(config: Config, dry_run: bool = False, force: bool = False) -> int
 
     if dry_run:
         print_dry_run(outcome)
+    else:
+        write_github_summary(outcome, config)
 
     if outcome.source_errors:
         logger.warning("Adatforrás hibák: %s", "; ".join(outcome.source_errors))

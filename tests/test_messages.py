@@ -52,6 +52,11 @@ class MessageTests(unittest.TestCase):
         message = build_start(self._series(), date(2026, 10, 1))
         self.assertIn("Ma válik vásárolhatóvá", message.title)
         self.assertIn("ma már megvásárolható", message.body)
+        self.assertIn("Hátralévő idő: 91 nap", message.body)
+
+    def test_announcement_has_countdown(self) -> None:
+        message = build_announcement(self._series(future=True), date(2026, 12, 28))
+        self.assertIn("Kezdésig: 7 nap", message.body)
 
     def test_first_run_lists_active_and_upcoming(self) -> None:
         active = self._series()

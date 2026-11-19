@@ -22,6 +22,23 @@ A cél, hogy időben tudd:
 Az értesítések **Discordra és Telegramra** mennek. A figyelő GitHub Actions
 alatt fut, ingyenes nyilvános repóban, naponta kétszer.
 
+![MÁP+ értesítés mintája Discordon](docs/discord-preview.png)
+
+*Minta: a Discord-üzenet elrendezése. A linkek a valós értesítésben kattinthatók.*
+
+## Tartalom
+
+- [Mit tartalmaz az értesítés?](#mit-tartalmaz-az-értesítés)
+- [Hogyan működik?](#hogyan-működik)
+- [GitHub Actions beállítása](#github-actions-beállítása)
+- [Discord webhook beállítása](#discord-webhook-beállítása)
+- [Telegram bot beállítása](#telegram-bot-beállítása)
+- [Helyi használat](#helyi-használat)
+- [Beállítások](#beállítások)
+- [Hibakeresés](#hibakeresés)
+- [Biztonság](#biztonság)
+- [Licenc](#licenc)
+
 ---
 
 ## Mit tartalmaz az értesítés?
@@ -60,6 +77,10 @@ További információ:
 
 A kihirdetéskori értesítésben ezen felül a **kihirdetés időpontja** is
 szerepel, hogy lásd, mikor jelent meg a sorozat.
+
+Discordon ugyanez **mezőkre bontott kártyaként** jelenik meg, a fontos
+adatokkal és kattintható gombokkal. A Telegram-üzenetben a címkék
+félkövérek, alatta szintén gombok vannak.
 
 ---
 
@@ -151,6 +172,10 @@ a sorozatról minden futáskor újra értesítést.
 - A GitHub Actions cache a default branch-hez tartozik; a scheduled
   workflow is ott fut.
 
+A futás végén a GitHub Actions **Step Summary** is megjelenik a run oldalán:
+jelenleg kapható és hamarosan induló sorozatok, valamint az értesítések
+összefoglalója.
+
 ### 5. Tesztek
 
 A repóban külön workflow futtatja a unit teszteket push és pull request
@@ -181,8 +206,10 @@ A webhook URL **titok**, mert aki ismeri, tud üzenetet küldeni a
 csatornára. Ne commitold, ne oszd meg, és ha véletlenül kikerül, töröld
 a webhookot a Discordban, majd készíts újat.
 
-A program Discord **embed** formában küldi az értesítést: cím, részletes
-szöveg, színes jelzés, a PDF-link pedig az embed címére kerül.
+A program Discord **embed** formában küldi az értesítést: cím, rövid
+leírás, mezők (sorozat, kamat, EHM, vételár, termék), lábléc, valamint
+WebKincstár, ajánlattétel és termékoldal gombok. A PDF-link az embed
+címére és a gombok közé is kerül.
 
 ---
 
@@ -204,7 +231,8 @@ TELEGRAM_CHAT_ID=123456789
 ```
 
 A botnak legalább egyszer írj rá (`/start`), különben nem tud neked
-üzenetet küldeni.
+üzenetet küldeni. Az üzenetben a fontos címkék félkövérek, alatta
+WebKincstár, ajánlattétel és termékoldal gombok jelennek meg.
 
 ---
 
@@ -425,11 +453,13 @@ allampapir_ertesito/
   messages.py       magyar értesítésszövegek
   models.py         adatmodellek
   monitor.py        figyelési logika
+  summary.py        GitHub Actions összefoglaló
   state.py          állapot és emlékeztetők
   util.py           formázás, segédfüggvények
   notifiers/        discord, telegram, ntfy, email, webhook, windows, console
 tests/              unittest tesztek
 scripts/            helyi Windows ütemező és futtató szkriptek
+docs/               README-hez tartozó minta kép
 .github/workflows/  GitHub Actions: ellenőrzés + tesztek
 config.example.toml helyi beállításminta
 config.ci.toml      GitHub Actions beállítás (titkok nélkül)
