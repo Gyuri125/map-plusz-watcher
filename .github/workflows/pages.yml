@@ -1,0 +1,49 @@
+name: Dashboard
+
+on:
+  schedule:
+    - cron: "15 6 * * *"
+    - cron: "15 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Dashboard build és deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Repó kiadása
+        uses: actions/checkout@v4
+
+      - name: Python beállítása
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Dashboard generálása
+        run: python -m allampapir_ertesito dashboard --config config.site.toml --output site
+
+      - name: Pages beállítása
+        uses: actions/configure-pages@v5
+
+      - name: Artifact feltöltése
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

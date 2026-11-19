@@ -20,7 +20,9 @@ A cél, hogy időben tudd:
 - melyik hivatalos dokumentumban vannak a részletek.
 
 Az értesítések **Discordra és Telegramra** mennek. A figyelő GitHub Actions
-alatt fut, ingyenes nyilvános repóban, naponta kétszer.
+alatt fut, ingyenes nyilvános repóban, naponta kétszer. A böngészős
+dashboard, a kamatgrafikon, az összehasonlítás, a kalkulátor és a
+naptárletöltés GitHub Pages alatt érhető el.
 
 ![MÁP+ értesítés mintája Discordon](docs/discord-preview.png)
 
@@ -68,6 +70,35 @@ szerepel, hogy lásd, mikor jelent meg a sorozat.
 Discordon ugyanez **mezőkre bontott kártyaként** jelenik meg, a fontos
 adatokkal és kattintható gombokkal. A Telegram-üzenetben a címkék
 félkövérek, alatta szintén gombok vannak.
+
+## Dashboard (GitHub Pages)
+
+![MÁP+ dashboard](docs/dashboard-preview.png)
+
+*Minta a dashboardból. A teljes, mindig friss oldal a Pages alatt érhető el.*
+
+A GitHub Pages dashboard ugyanezt az adatot mutatja böngészőben:
+
+- aktuális MÁP+ sorozat a legfontosabb adatokkal,
+- a következő sorozat és a kezdésig hátralévő idő,
+- EHM-grafikon a korábbi sorozatokból,
+- korábbi sorozatok táblázata PDF-linkekkel,
+- MÁP+ és más lakossági állampapírok összehasonlítása,
+- hozamkalkulátor a befektetett összeg alapján,
+- letölthető **naptárfájl** (`.ics`) az indulási és zárónapokkal.
+
+A dashboardot a `Dashboard` workflow generálja, és GitHub Pages artifactként
+publikálja, nem commitol a repóba. A naptárfájl a dashboardról tölthető le:
+`map-plusz.ics`. A Discord és Telegram **Naptárba** gombja is erre a fájlra
+mutat, ezért az a Pages engedélyezése után válik elérhetővé.
+
+A Pages első engedélyezése kézi lépés:
+
+**Settings > Pages > Build and deployment > Source: GitHub Actions**
+
+Ezután a dashboard itt érhető el:
+
+**https://gyuri125.github.io/map-plusz-watcher/**
 
 ---
 
@@ -174,6 +205,23 @@ esetén:
 
 Ez nem küld értesítést, nem kellenek hozzá secretök.
 
+### 6. Dashboard (GitHub Pages)
+
+A dashboardhoz nem kell secret. A workflow:
+
+```text
+.github/workflows/pages.yml
+```
+
+A Pages forrást állítsd **GitHub Actions**-ra:
+
+**Settings > Pages > Build and deployment > Source: GitHub Actions**
+
+Utána az **Actions > Dashboard > Run workflow** paranccsal azonnal
+publikálhatod, vagy várd meg a 06:15 / 15:15 UTC-s ütemezett futást.
+A dashboard a `config.site.toml` fájlt használja, amely nem tartalmaz
+titkot, és a generált `site/` mappát artifactként tölti fel.
+
 ---
 
 ## Discord webhook beállítása
@@ -249,6 +297,16 @@ python -m allampapir_ertesito init
 Ez létrehozza a `config.toml`-t a `config.example.toml` mintából. A
 `config.toml` a `.gitignore` miatt nem kerül a repóba.
 
+Gyorsabb út a Discord/Telegram beállításához:
+
+```powershell
+python -m allampapir_ertesito setup
+```
+
+A varázsló elkéri a webhookot, a bot tokent és a chat_id-t, megírja a
+`.env`-et, és bekapcsolja a kiválasztott csatornákat a `config.toml`-ban.
+A titkokat nem írja a képernyőre és nem teszi a repóba.
+
 ### 3. Titkok `.env` fájlban
 
 ```powershell
@@ -294,6 +352,17 @@ powershell -ExecutionPolicy Bypass -File scripts\register_task.ps1 -Time "09:00"
 ```
 
 A részletek a szkript fejlécében és a `scripts/` mappában vannak.
+
+### 7. Dashboard helyben
+
+A dashboard helyben is legenerálható:
+
+```powershell
+python -m allampapir_ertesito dashboard --config config.site.toml --output site
+```
+
+Utána nyisd meg a `site/index.html` fájlt. A `site/map-plusz.ics` a
+naptárfájl. A `site/` mappa a `.gitignore` miatt nem kerül a repóba.
 
 ---
 
@@ -401,9 +470,11 @@ futás első futásként indul, és összefoglalót küld. Utána ismét normali
 
 ## Biztonság
 
-- A `config.toml`, `.env`, `state.json` és `logs/` a `.gitignore` miatt
-  nem kerül a repóba.
-- A `config.ci.toml` csak `${...}` helyőrzőket tartalmaz, valódi titkot nem.
+- A `config.toml`, `.env`, `state.json`, `logs/` és a generált `site/`
+  a `.gitignore` miatt nem kerül a repóba.
+- A `config.ci.toml` és a `config.site.toml` csak helyőrzőket és nyilvános
+  beállításokat tartalmaz, valódi titkot nem.
+- A dashboard workflow nem használ secretet, és nem commitol a repóba.
 - A Discord webhook URL és a Telegram bot token **secret**. Ha bármelyik
   kikerül, azonnal töröld/újítsd meg.
 - A program a Discord és Telegram hibákban kitakarja a webhook URL-t,
@@ -425,6 +496,12 @@ Részletek: [`SECURITY.md`](SECURITY.md).
   ütemezett workflow-kat. Ilyenkor az Actions oldalon engedélyezd újra,
   és tölts fel egy apró commitot (vagy nyiss egy issue-t/PR-t), hogy a
   repó ismét aktívnak számítson.
+- A dashboard és a naptár a GitHub Pages alatt érhető el; a Pages első
+  engedélyezése kézi lépés.
+- A naptárfájl az aktuális és a már kihirdetett következő sorozatokat
+  tartalmazza, a korábbiakat nem.
+- A hozamkalkulátor az első évi kamattal számoló becslés, nem teljes
+  pénzügyi modell.
 - A program nem ad befektetési tanácsot. Vásárlás előtt mindig ellenőrizd
   a hivatalos nyilvános ajánlattételt és a forgalmazó tájékoztatását.
 
@@ -437,20 +514,25 @@ allampapir_ertesito/
   akk.py            ÁKK API kliens és feldolgozás
   cli.py            parancssori felület
   config.py         TOML beállítások, .env betöltés
+  calendar.py       .ics naptárfájl generálás
+  dashboard.py      statikus dashboard generálás
   messages.py       magyar értesítésszövegek
   models.py         adatmodellek
   monitor.py        figyelési logika
+  setup_wizard.py   interaktív helyi beállítás
   summary.py        GitHub Actions összefoglaló
   state.py          állapot és emlékeztetők
   util.py           formázás, segédfüggvények
   notifiers/        discord, telegram, ntfy, email, webhook, windows, console
 tests/              unittest tesztek
 scripts/            helyi Windows ütemező és futtató szkriptek
-docs/               minta kép és social preview
-.github/workflows/  GitHub Actions: ellenőrzés + tesztek
+docs/               minta képek és social preview
+.github/workflows/  GitHub Actions: ellenőrzés, tesztek, dashboard
 config.example.toml helyi beállításminta
 config.ci.toml      GitHub Actions beállítás (titkok nélkül)
+config.site.toml    dashboard beállítás (titkok nélkül)
 .env.example        helyi titkok mintája
+site/               generált dashboard (ignored)
 ```
 
 ---
@@ -463,7 +545,8 @@ python -m unittest discover -s tests -t . -v
 
 A tesztek nem hálózatoznak; hamis adatokkal ellenőrzik a feldolgozást,
 a kétfázisú értesítést, a duplikációvédelmet, a Discord/Telegram payloadot,
-a `.env` betöltést és az emlékeztetőt.
+a `.env` betöltést, a dashboardot, a naptárfájlt, a setup segédfüggvényeit
+és az emlékeztetőt. Jelenleg 50 unittest fut.
 
 A GitHubon a `Tesztek` workflow push és pull request esetén automatikusan
 lefut Ubuntu és Windows alatt is.

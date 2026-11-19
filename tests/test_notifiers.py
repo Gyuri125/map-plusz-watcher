@@ -90,6 +90,7 @@ class NotifierTests(unittest.TestCase):
         labels = [button["text"] for button in buttons]
         self.assertIn("WebKincstár", labels)
         self.assertIn("Ajánlattétel", labels)
+        self.assertIn("Naptárba", labels)
         self.assertIn("123:abc", request.full_url)
 
     def test_telegram_html_label_formatting(self) -> None:
@@ -120,6 +121,7 @@ class NotifierTests(unittest.TestCase):
         self.assertEqual(embed["fields"][0]["name"], "Sorozat")
         labels = [button["label"] for button in payload["components"][0]["components"]]
         self.assertIn("WebKincstár", labels)
+        self.assertIn("Naptárba", labels)
         self.assertIn("with_components=true", urlopen.call_args[0][0].full_url)
 
     @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")

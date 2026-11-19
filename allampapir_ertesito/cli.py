@@ -13,6 +13,7 @@ from pathlib import Path
 from . import __version__
 from .akk import AkkClient, AkkError
 from .config import Config, ConfigError, load_config
+from .dashboard import DashboardError, build_data, write_dashboard
 from .messages import build_test
 from .models import CheckOutcome, Offering, RetailSeries, SeriesInfo
 from .monitor import (
@@ -26,6 +27,7 @@ from .monitor import (
     select_future_offerings,
 )
 from .notifiers import NotifierManager, build_notifiers
+from .setup_wizard import run_setup
 from .state import StateStore
 from .summary import write_github_summary
 from .util import (
@@ -265,6 +267,29 @@ def run_status(config: Config, offline: bool) -> int:
     return 0
 
 
+def run_dashboard(config: Config, output: str) -> int:
+    logger = logging.getLogger(LOGGER_NAME)
+    client = AkkClient(timeout=config.app.http_timeout_seconds)
+    try:
+        data = build_data(client, config)
+    except DashboardError as exc:
+        logger.error("A dashboardhoz nem sikerült adatot szerezni: %s", exc)
+        return 1
+    if data.source_errors:
+        logger.warning("Részleges adatlekérési hiba: %s", "; ".join(data.source_errors))
+    output_dir = Path(output)
+    if not output_dir.is_absolute():
+        output_dir = (Path.cwd() / output_dir).resolve()
+    try:
+        index_path = write_dashboard(data, config, output_dir)
+    except OSError as exc:
+        logger.error("A dashboard írása sikertelen: %s", exc)
+        return 1
+    logger.info("Dashboard elkészült: %s", index_path)
+    print(f"Dashboard: {index_path}")
+    return 0
+
+
 def run_watch(config: Config, interval_minutes: int) -> int:
     logger = logging.getLogger(LOGGER_NAME)
     if interval_minutes < 1:
@@ -375,6 +400,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ne kérje le az élő adatokat, csak a helyi állapotot mutassa.",
     )
 
+    dashboard = subparsers.add_parser(
+        "dashboard",
+        help="Statikus dashboard és naptárfájl generálása.",
+    )
+    add_common(dashboard)
+    dashboard.add_argument(
+        "--output",
+        default="site",
+        help="Kimeneti mappa (alapértelmezés: site).",
+    )
+
+    setup = subparsers.add_parser(
+        "setup",
+        help="Interaktív helyi beállítás Discordhoz és Telegramhoz.",
+    )
+    add_common(setup)
+
     init = subparsers.add_parser("init", help="config.toml létrehozása a mintából.")
     init.add_argument("--config", help="A létrehozandó config.toml útvonala.")
     init.add_argument("--force", action="store_true", help="Meglévő fájl felülírása.")
@@ -388,6 +430,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "init":
         return run_init(args)
+    if args.command == "setup":
+        return run_setup(args.config)
 
     try:
         config = load_config(args.config)
@@ -407,6 +451,8 @@ def main(argv: list[str] | None = None) -> int:
             return run_test(config)
         if args.command == "status":
             return run_status(config, offline=args.offline)
+        if args.command == "dashboard":
+            return run_dashboard(config, args.output)
         parser.error(f"Ismeretlen parancs: {args.command}")
         return 2
     except ConfigError as exc:

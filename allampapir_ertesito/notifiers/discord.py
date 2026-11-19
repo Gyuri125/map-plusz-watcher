@@ -7,6 +7,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from ..calendar import PUBLIC_URL
 from ..config import DiscordSettings
 from ..messages import (
     PAYMENT_NOTE,
@@ -165,6 +166,7 @@ class DiscordNotifier(Notifier):
         links = [f"[WebKincstár]({WEBKINCSTAR_URL})"]
         if series.pdf_url:
             links.append(f"[Ajánlattétel]({series.pdf_url})")
+        links.append(f"[Naptárba]({PUBLIC_URL}map-plusz.ics)")
         links.append(f"[AKK termékoldal]({PRODUCT_PAGE})")
         fields.extend(
             [
@@ -222,6 +224,14 @@ class DiscordNotifier(Notifier):
                     "url": series.pdf_url,
                 }
             )
+        buttons.append(
+            {
+                "type": 2,
+                "style": 5,
+                "label": "Naptárba",
+                "url": f"{PUBLIC_URL}map-plusz.ics",
+            }
+        )
         buttons.append(
             {
                 "type": 2,

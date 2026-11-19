@@ -1,0 +1,18 @@
+# ============================================================
+#  GitHub Pages dashboard konfiguráció
+# ============================================================
+#  Ez a fájl nyilvános, nem tartalmaz titkot. A dashboard
+#  generálásához nem kellenek értesítési csatornák, de a
+#  konfiguráció érvényességéhez a konzol be van kapcsolva.
+# ============================================================
+
+[app]
+state_file = "state.json"
+log_file = ""
+timezone = "Europe/Budapest"
+lookback_days = 730
+announce_horizon_days = 120
+http_timeout_seconds = 30
+
+[notifiers.console]
+enabled = true

@@ -203,6 +203,23 @@ class AkkClient:
                 )
         return series
 
+    def fetch_retail_products(
+        self,
+        today: date,
+        lookback_days: int = 30,
+    ) -> list[RetailSeries]:
+        """Az összes aktív lakossági állampapír-típus aktuális sorai.
+
+        A dashboard összehasonlító táblájához kell (MÁP+, FixMÁP, PMÁP, ...).
+        """
+        params = {
+            "query": "getRetailInterestExt",
+            "validFrom": (today - timedelta(days=lookback_days)).isoformat(),
+        }
+        payload = self._get_json(params)
+        rows = self._data_rows(payload, "getRetailInterestExt")
+        return [item for item in parse_retail(rows) if item.is_active(today)]
+
     def _get_json(self, params: dict[str, Any]) -> dict[str, Any]:
         query = urllib.parse.urlencode(params, doseq=True)
         url = f"{self.base_url}?{query}"

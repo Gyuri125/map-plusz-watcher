@@ -30,6 +30,9 @@ dist/
 *.egg-info/
 .eggs/
 
+# Generált dashboard (a Pages workflow artifactként publikálja)
+site/
+
 # Szerkesztők
 .vscode/
 .idea/

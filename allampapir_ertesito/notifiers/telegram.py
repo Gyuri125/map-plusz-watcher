@@ -8,6 +8,7 @@ import re
 import urllib.error
 import urllib.request
 
+from ..calendar import PUBLIC_URL
 from ..config import TelegramSettings
 from ..messages import PRODUCT_PAGE, WEBKINCSTAR_URL
 from ..models import Message
@@ -123,7 +124,10 @@ class TelegramNotifier(Notifier):
             first_row.append({"text": "Ajánlattétel", "url": series.pdf_url})
         return [
             first_row,
-            [{"text": "AKK termékoldal", "url": PRODUCT_PAGE}],
+            [
+                {"text": "AKK termékoldal", "url": PRODUCT_PAGE},
+                {"text": "Naptárba", "url": f"{PUBLIC_URL}map-plusz.ics"},
+            ],
         ]
 
     def _redact(self, text: str) -> str:
