@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "allampapir-ertesito"
+version = "1.0.0"
+description = "MÁP+ állampapír sorozatok figyelése és értesítése"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {file = "LICENSE"}
+dependencies = []
+
+[project.optional-dependencies]
+windows = ["winotify>=1.1.0"]
+
+[project.scripts]
+allampapir-ertesito = "allampapir_ertesito.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["allampapir_ertesito*"]

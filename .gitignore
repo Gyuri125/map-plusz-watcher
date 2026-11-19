@@ -1,0 +1,47 @@
+# ------------------------------------------------------------------
+#  Helyi titkok és személyes beállítások – ezek NEM kerülhetnek fel
+#  a nyilvános repóba.
+# ------------------------------------------------------------------
+config.toml
+.env
+.env.*
+!.env.example
+state.json
+state.json.corrupt-*
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Csomagolás / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Szerkesztők
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*~
+
+# Operációs rendszer
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Ideiglenes fájlok
+*.tmp
+*.temp

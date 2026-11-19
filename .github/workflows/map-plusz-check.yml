@@ -1,0 +1,60 @@
+name: MÁP+ ellenőrzés
+
+on:
+  schedule:
+    # GitHub Actions UTC-ben érti az időpontokat.
+    # 06:00 UTC = 07:00/08:00 Magyarországon
+    # 15:00 UTC = 16:00/17:00 Magyarországon
+    - cron: "0 6 * * *"
+    - cron: "0 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: map-plusz-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Új MÁP+ sorozatok keresése
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: "utf-8"
+
+    steps:
+      - name: Repó kiadása
+        uses: actions/checkout@v4
+
+      - name: Python beállítása
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Előző állapot visszaállítása
+        uses: actions/cache/restore@v4
+        continue-on-error: true
+        with:
+          path: state.json
+          key: map-plusz-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            map-plusz-state-
+
+      - name: Ellenőrzés és értesítés
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python -m allampapir_ertesito check --config config.ci.toml
+
+      - name: Állapot mentése a következő futáshoz
+        if: always() && hashFiles('state.json') != ''
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: state.json
+          key: map-plusz-state-${{ github.run_id }}-${{ github.run_attempt }}

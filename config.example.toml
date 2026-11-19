@@ -1,0 +1,126 @@
+# ============================================================
+#  MÁP+ értesítő – beállítások
+# ============================================================
+#  A fájlt másold config.toml néven, vagy futtasd:
+#      python -m allampapir_ertesito init
+#  A titkokat (jelszó, bot token, webhook URL) ne írd bele közvetlenül.
+#  Helyben a .env fájlból, GitHub Actions alatt a repository
+#  secretökből olvassa be őket; itt csak ${VALTOZO_NEV} legyen.
+# ============================================================
+
+[app]
+
+# Első futáskor küldjön-e összefoglalót a jelenleg kapható és a
+# hamarosan induló sorozatokról.
+first_run_notify = true
+
+# Amikor az ÁKK kihirdet egy új sorozatot (a vásárlás kezdete előtt
+# néhány nappal), küldjön-e előzetes értesítést.
+announce_new_offerings = true
+
+# A vásárolhatóvá válás napján küldjön-e értesítést.
+notify_on_start = true
+
+# Ha mindkét adatforrás hibára fut, küldjön-e hibaértesítést
+# (legfeljebb 24 óránként egyszer).
+notify_on_error = false
+
+# Állapotfájl – ne töröld, ez akadályozza meg az ismételt értesítéseket.
+state_file = "state.json"
+
+# Naplófájl. Ha üres, csak a képernyőre ír.
+log_file = "logs/allampapir.log"
+
+# Időzóna az indulás/lezárás napjának meghatározásához.
+timezone = "Europe/Budapest"
+
+# Az ÁKK API-ból visszamenőleg ennyi napot kérjen le.
+lookback_days = 730
+
+# Ennyi nappal előre jelezze a már kihirdetett sorozatokat.
+announce_horizon_days = 120
+
+# HTTP időtúllépés másodpercben.
+http_timeout_seconds = 30
+
+
+# ------------------------------------------------------------
+#  Értesítési csatornák
+#  Kapcsold be, amelyiket használni szeretnéd. Legalább egynek
+#  aktívnak kell lennie.
+# ------------------------------------------------------------
+
+[notifiers.console]
+# Képernyőre és a naplófájlba írt értesítés. Érdemes bekapcsolva hagyni.
+enabled = true
+
+
+[notifiers.ntfy]
+# A legegyszerűbb mobilértesítés. Telepítsd az ntfy appot
+# (Android/iOS), iratkozz fel a lenti témára, és máris működik.
+# A témát ne oszd meg másokkal; elég hosszú és egyedi legyen.
+enabled = false
+url = "https://ntfy.sh"
+topic = ""
+priority = "high"
+tags = ["moneybag"]
+click_url = "https://webkincstar.allamkincstar.gov.hu/"
+# Ha védett (tokenes) témát használsz:
+# token = "${NTFY_TOKEN}"
+
+
+[notifiers.email]
+# SMTP-n keresztüli e-mail. Gmailnél alkalmazásjelszó szükséges.
+enabled = false
+host = "smtp.gmail.com"
+port = 587
+starttls = true
+ssl = false
+username = ""
+password = "${SMTP_PASSWORD}"
+from = ""
+to = ["pelda@example.com"]
+
+
+[notifiers.telegram]
+# Telegram bot értesítés. A bot tokent a @BotFather adja.
+# A chat_id-t például a @userinfobot tudja megmondani.
+enabled = false
+bot_token = "${TELEGRAM_BOT_TOKEN}"
+chat_id = "${TELEGRAM_CHAT_ID}"
+# Csoportos chat témájához (opcionális):
+message_thread_id = 0
+
+
+[notifiers.discord]
+# Discord webhook értesítés. A webhook URL-t a Discord csatorna
+# Beállítások -> Integrációk -> Webhookok menüjében lehet létrehozni.
+enabled = false
+webhook_url = "${DISCORD_WEBHOOK_URL}"
+username = "MÁP+ értesítő"
+# avatar_url = "https://..."
+
+
+[notifiers.windows]
+# Windows 10/11 rendszerértesítés. Előtte:
+#     pip install winotify
+enabled = false
+
+
+[notifiers.webhook]
+# Általános JSON webhook saját szolgáltatáshoz, illetve olyan
+# végpontokhoz, amelyek JSON POST-ot fogadnak.
+enabled = false
+url = ""
+# method = "POST"
+# [notifiers.webhook.headers]
+# Authorization = "Bearer ..."
+
+
+[reminder]
+# Opcionális vásárlási/fizetési emlékeztető az indulási értesítés
+# után megadott órával. Csak akkor ütemeződik, ha egy sorozat
+# indulási értesítése ténylegesen kiment.
+enabled = false
+delay_hours = 24
+text = "Ne feledd: az új MÁP+ sorozat megvásárlásához a vételárat is rendezned kell."

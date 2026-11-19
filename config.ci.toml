@@ -1,0 +1,52 @@
+# ============================================================
+#  GitHub Actions konfiguráció
+# ============================================================
+#  Ez a fájl nyilvános, ezért NEM tartalmaz titkot: a Discord
+#  webhook URL és a Telegram token a repository secretökből
+#  érkezik, ${...} helyőrzőkön keresztül.
+#
+#  A workflow: .github/workflows/map-plusz-check.yml
+#  A szükséges secretök:
+#     DISCORD_WEBHOOK_URL
+#     TELEGRAM_BOT_TOKEN
+#     TELEGRAM_CHAT_ID
+#
+#  Ha csak az egyik csatornát használod, állítsd a másikat
+#  enabled = false értékre, és a hozzá tartozó secretet nem kell
+#  beállítanod.
+# ============================================================
+
+[app]
+first_run_notify = true
+announce_new_offerings = true
+notify_on_start = true
+notify_on_error = true
+state_file = "state.json"
+log_file = ""
+timezone = "Europe/Budapest"
+lookback_days = 730
+announce_horizon_days = 120
+http_timeout_seconds = 30
+
+# A CI-ben nem írunk a nyilvános action logba teljes üzenetet.
+[notifiers.console]
+enabled = false
+
+[notifiers.discord]
+# Ha nincs DISCORD_WEBHOOK_URL secret, állítsd enabled = false-ra.
+enabled = true
+webhook_url = "${DISCORD_WEBHOOK_URL}"
+username = "MÁP+ értesítő"
+
+[notifiers.telegram]
+# Ha nincs TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secret, állítsd
+# enabled = false-ra.
+enabled = true
+bot_token = "${TELEGRAM_BOT_TOKEN}"
+chat_id = "${TELEGRAM_CHAT_ID}"
+message_thread_id = 0
+
+[reminder]
+enabled = false
+delay_hours = 24
+text = "Ne feledd: az új MÁP+ sorozat megvásárlásához a vételárat is rendezned kell."
