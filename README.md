@@ -89,8 +89,9 @@ A GitHub Pages dashboard ugyanezt az adatot mutatja böngészőben:
 
 A dashboardot a `Dashboard` workflow generálja, és GitHub Pages artifactként
 publikálja, nem commitol a repóba. A naptárfájl a dashboardról tölthető le:
-`map-plusz.ics`. A Discord és Telegram **Naptárba** gombja is erre a fájlra
-mutat, ezért az a Pages engedélyezése után válik elérhetővé.
+`map-plusz.ics`. A Discord és Telegram **Dashboard** gombja a weboldalra,
+a **Naptárba** gombja pedig erre a fájlra mutat, ezért ezek a Pages
+engedélyezése után válnak elérhetővé.
 
 A Pages első engedélyezése kézi lépés:
 
@@ -243,8 +244,8 @@ a webhookot a Discordban, majd készíts újat.
 
 A program Discord **embed** formában küldi az értesítést: cím, rövid
 leírás, mezők (sorozat, kamat, EHM, vételár, termék), lábléc, valamint
-WebKincstár, ajánlattétel és termékoldal gombok. A PDF-link az embed
-címére és a gombok közé is kerül.
+WebKincstár, ajánlattétel, dashboard, naptár és termékoldal gombok.
+A PDF-link az embed címére és a gombok közé is kerül.
 
 ---
 
@@ -267,7 +268,8 @@ TELEGRAM_CHAT_ID=123456789
 
 A botnak legalább egyszer írj rá (`/start`), különben nem tud neked
 üzenetet küldeni. Az üzenetben a fontos címkék félkövérek, alatta
-WebKincstár, ajánlattétel és termékoldal gombok jelennek meg.
+WebKincstár, ajánlattétel, dashboard, naptár és termékoldal gombok
+jelennek meg.
 
 ---
 

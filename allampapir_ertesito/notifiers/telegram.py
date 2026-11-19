@@ -125,8 +125,9 @@ class TelegramNotifier(Notifier):
         return [
             first_row,
             [
-                {"text": "AKK termékoldal", "url": PRODUCT_PAGE},
+                {"text": "Dashboard", "url": PUBLIC_URL},
                 {"text": "Naptárba", "url": f"{PUBLIC_URL}map-plusz.ics"},
+                {"text": "AKK termékoldal", "url": PRODUCT_PAGE},
             ],
         ]
 

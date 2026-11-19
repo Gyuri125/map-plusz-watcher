@@ -166,6 +166,7 @@ class DiscordNotifier(Notifier):
         links = [f"[WebKincstár]({WEBKINCSTAR_URL})"]
         if series.pdf_url:
             links.append(f"[Ajánlattétel]({series.pdf_url})")
+        links.append(f"[Dashboard]({PUBLIC_URL})")
         links.append(f"[Naptárba]({PUBLIC_URL}map-plusz.ics)")
         links.append(f"[AKK termékoldal]({PRODUCT_PAGE})")
         fields.extend(
@@ -224,6 +225,14 @@ class DiscordNotifier(Notifier):
                     "url": series.pdf_url,
                 }
             )
+        buttons.append(
+            {
+                "type": 2,
+                "style": 5,
+                "label": "Dashboard",
+                "url": PUBLIC_URL,
+            }
+        )
         buttons.append(
             {
                 "type": 2,
