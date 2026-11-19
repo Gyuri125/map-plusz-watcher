@@ -1,5 +1,8 @@
 # MÁP+ Watcher
 
+![MÁP+ ellenőrzés](https://github.com/Gyuri125/map-plusz-watcher/actions/workflows/map-plusz-check.yml/badge.svg)
+![Tesztek](https://github.com/Gyuri125/map-plusz-watcher/actions/workflows/tests.yml/badge.svg)
+
 > **English:** Watches new Hungarian MÁP+ government bond series and sends
 > Discord/Telegram alerts when they are announced and when they become
 > available for purchase. Runs twice a day on GitHub Actions.
@@ -18,10 +21,6 @@ A cél, hogy időben tudd:
 
 Az értesítések **Discordra és Telegramra** mennek. A figyelő GitHub Actions
 alatt fut, ingyenes nyilvános repóban, naponta kétszer.
-
-<!-- A badge-hez írd be a saját felhasználóneved és a repó nevét:
-![MÁP+ ellenőrzés](https://github.com/FELHASZNALONEV/REPO/actions/workflows/map-plusz-check.yml/badge.svg)
--->
 
 ---
 
@@ -97,32 +96,18 @@ nem commitolódik a repóba.
 
 ## GitHub Actions beállítása
 
-Ez a javasolt használat: nem kell saját gépet folyamatosan bekapcsolva
-tartani, és a nyilvános repóban a standard GitHub Actions runner ingyenes.
+A repó: [Gyuri125/map-plusz-watcher](https://github.com/Gyuri125/map-plusz-watcher).
+A figyelő GitHub Actions alatt fut; a nyilvános repóban a standard runner
+ingyenes. Ha forkoltad a repót, a secretöket a saját forkodban állítsd be.
 
-### 1. Repó létrehozása
-
-Hozz létre egy **public** repót a GitHubon, majd töltsd fel a kódot.
-
-### 2. Kód feltöltése
-
-```powershell
-git init
-git add .
-git commit -m "MÁP+ figyelő inicializálása"
-git branch -M main
-git remote add origin https://github.com/FELHASZNALONEV/REPO.git
-git push -u origin main
-```
-
-A `.gitignore` miatt a `config.toml`, `.env`, `state.json`, `logs/` **nem**
-kerül fel a repóba. A `config.ci.toml` viszont igen, mert abban csak
-`${...}` helyőrzők vannak, titkok nincsenek.
-
-### 3. Secretök beállítása
+### 1. Secretök beállítása
 
 A GitHubon: **Settings > Secrets and variables > Actions > New repository
 secret**.
+
+A `.gitignore` miatt a `config.toml`, `.env`, `state.json` és `logs/` nem
+kerül a repóba. A `config.ci.toml` viszont igen, mert abban csak `${...}`
+helyőrzők vannak, valódi titkok nincsenek.
 
 | Secret | Kötelező? | Mit tartalmaz? |
 |---|---|---|
@@ -134,7 +119,7 @@ A `config.ci.toml` alapértelmezésben **mindkét** csatornát bekapcsolja.
 Ha csak az egyiket használod, a másikat állítsd `enabled = false` értékre,
 és a hozzá tartozó secretet nem kell beállítanod.
 
-### 4. Első futtatás
+### 2. Első futtatás
 
 A GitHubon: **Actions > MÁP+ ellenőrzés > Run workflow**.
 
@@ -142,7 +127,7 @@ Az első futás egy összefoglalót küld a jelenleg kapható és a hamarosan
 induló sorozatokról. Ezután már csak akkor küld, ha új sorozat jelenik meg,
 vagy egy sorozat vásárolhatóvá válik.
 
-### 5. Ütemezés
+### 3. Ütemezés
 
 A workflow a `.github/workflows/map-plusz-check.yml` fájlban van. A
 beállított ütemezés UTC szerint:
@@ -154,7 +139,7 @@ A délutáni futás elkapja az ÁKK aznapi kihirdetéseit, a reggeli pedig az
 indulás napján időben szól. A GitHub Actions ütemezett futásai néhány
 percet késhetnek nagy terhelés esetén.
 
-### 6. Állapot és cache
+### 4. Állapot és cache
 
 A workflow a `state.json`-t az Actions cache-ből állítja vissza, majd a
 futás végén új cache-be menti. Ez biztosítja, hogy ne küldjön ugyanarról
@@ -166,7 +151,7 @@ a sorozatról minden futáskor újra értesítést.
 - A GitHub Actions cache a default branch-hez tartozik; a scheduled
   workflow is ott fut.
 
-### 7. Tesztek
+### 5. Tesztek
 
 A repóban külön workflow futtatja a unit teszteket push és pull request
 esetén:
@@ -225,7 +210,12 @@ A botnak legalább egyszer írj rá (`/start`), különben nem tud neked
 
 ## Helyi használat
 
-A GitHub Actions mellett helyben is kipróbálhatod.
+A GitHub Actions mellett helyben is kipróbálhatod. Klónozd a repót:
+
+```powershell
+git clone https://github.com/Gyuri125/map-plusz-watcher.git
+cd map-plusz-watcher
+```
 
 ### 1. Python
 
