@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import importlib.util
 import logging
 import logging.handlers
 import os
@@ -15,6 +16,7 @@ from pathlib import Path
 
 from . import __version__
 from .akk import AkkClient, AkkError
+from .chart import render_chart
 from .config import Config, ConfigError, find_config, load_config
 from .dashboard import DashboardError, build_data, write_dashboard
 from .messages import build_status, build_test
@@ -95,9 +97,46 @@ def setup_logging(config: Config, verbose: bool) -> None:
             logger.warning("A naplófájl nem nyitható meg (%s): %s", config.app.log_file, exc)
 
 
+def _chart_path(config: Config) -> Path:
+    return config.app.state_file.parent / "chart-latest.png"
+
+
+def _chart_enabled(config: Config) -> bool:
+    if not config.app.attach_chart:
+        return False
+    if importlib.util.find_spec("PIL") is None:
+        logging.getLogger(LOGGER_NAME).warning(
+            "A Pillow csomag nincs telepítve; a grafikon csatolása kimarad. "
+            "Telepítés: pip install pillow"
+        )
+        return False
+    return True
+
+
+def make_chart_provider(config: Config, client: AkkClient):
+    """A check futásakor lustán, csak értesítés esetén készíti el a képet."""
+    if not _chart_enabled(config):
+        return None
+
+    def provide() -> Path:
+        data = build_data(client, config)
+        return render_chart(data, _chart_path(config))
+
+    return provide
+
+
+def make_data_chart_provider(config: Config, data):
+    if not _chart_enabled(config):
+        return None
+    return lambda: render_chart(data, _chart_path(config))
+
+
 def build_runtime(config: Config) -> tuple[Monitor, NotifierManager]:
     client = AkkClient(timeout=config.app.http_timeout_seconds)
-    manager = NotifierManager(build_notifiers(config))
+    manager = NotifierManager(
+        build_notifiers(config),
+        attachment_provider=make_chart_provider(config, client),
+    )
     store = StateStore(config.app.state_file)
     monitor = Monitor(config, client, manager, store)
     return monitor, manager
@@ -331,7 +370,11 @@ def run_quick(
         logger.warning("Részleges adatlekérési hiba: %s", "; ".join(data.source_errors))
 
     today = data.generated_at.date()
-    manager = NotifierManager(build_notifiers(config))
+    manager = NotifierManager(
+        build_notifiers(config),
+        attachment_provider=make_data_chart_provider(config, data),
+    )
+    manager.begin_cycle()
     external_channels = [name for name in manager.names if name != "console"]
     if not external_channels:
         logger.warning(

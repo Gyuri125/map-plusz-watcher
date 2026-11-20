@@ -26,6 +26,7 @@ class AppSettings:
     announce_new_offerings: bool = True
     notify_on_start: bool = True
     ending_soon_days: int = 14
+    attach_chart: bool = True
     notify_on_error: bool = False
     state_file: Path = Path("state.json")
     log_file: Path | None = Path("logs/allampapir.log")
@@ -334,6 +335,7 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         ending_soon_days=_as_int(
             app_raw.get("ending_soon_days"), 14, "app.ending_soon_days"
         ),
+        attach_chart=_as_bool(app_raw.get("attach_chart"), True),
         notify_on_error=_as_bool(app_raw.get("notify_on_error"), False),
         state_file=_resolve_path(base, app_raw.get("state_file", "state.json")) or (base / "state.json"),
         log_file=_resolve_path(base, app_raw.get("log_file", "logs/allampapir.log")),

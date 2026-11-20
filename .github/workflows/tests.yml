@@ -30,5 +30,8 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Pillow telepítése a grafikonteszthez
+        run: python -m pip install "pillow>=10"
+
       - name: Unit tesztek futtatása
         run: python -m unittest discover -s tests -t . -v

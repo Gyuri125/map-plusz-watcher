@@ -3,9 +3,10 @@
     Csendes, napi helyi futtatás Windows Feladatütemezővel.
 
     A feladat pythonw.exe-vel fut, ezért nincs konzolablak, és nem nyit
-    böngészőt. A quick parancs elküldi a helyzetjelentést a bekapcsolt
-    Discord/Telegram csatornákra, és csendben frissíti a helyi dashboardot
-    a site/index.html fájlban.
+    böngészőt. A check parancs csak esemény esetén küld értesítést a
+    bekapcsolt Discord/Telegram csatornákra (új sorozat, indulás,
+    lejárat előtti figyelmeztetés), és csendben frissíti a helyi
+    dashboardot a site/index.html fájlban.
 
     Példa:
         powershell -ExecutionPolicy Bypass -File scripts\register_silent_task.ps1
@@ -75,7 +76,7 @@ Register-ScheduledTask `
     -Action $action `
     -Trigger $trigger `
     -Settings $settings `
-    -Description "MÁP+ helyzetjelentés csendben, helyi dashboard frissítéssel" `
+    -Description "MÁP+ eseményértesítés csendben, helyi dashboard frissítéssel" `
     -Force | Out-Null
 
 Write-Host "A csendes feladat létrejött: $TaskName"

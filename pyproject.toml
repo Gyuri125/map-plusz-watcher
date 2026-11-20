@@ -12,6 +12,7 @@ license = {file = "LICENSE"}
 dependencies = []
 
 [project.optional-dependencies]
+charts = ["pillow>=10"]
 windows = ["winotify>=1.1.0"]
 
 [project.scripts]

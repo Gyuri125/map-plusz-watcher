@@ -13,7 +13,7 @@ timezone = "Europe/Budapest"
 lookback_days = 730
 announce_horizon_days = 120
 http_timeout_seconds = 30
-public_url = "https://gyuri125.github.io/map-plusz-watcher"
+public_url = "https://gyuri125.github.io/map-plusz-watcher/"
 
 [notifiers.console]
 enabled = true

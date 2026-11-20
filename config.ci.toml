@@ -21,6 +21,7 @@ first_run_notify = true
 announce_new_offerings = true
 notify_on_start = true
 ending_soon_days = 14
+attach_chart = true
 notify_on_error = true
 state_file = "state.json"
 log_file = ""
@@ -28,9 +29,9 @@ timezone = "Europe/Budapest"
 lookback_days = 730
 announce_horizon_days = 120
 http_timeout_seconds = 30
-# Ha a GitHub Pages dashboard él, állítsd be:
-# public_url = "https://gyuri125.github.io/map-plusz-watcher"
-public_url = ""
+# A GitHub Pages dashboard URL-je. Ha a Pages még nincs bekapcsolva,
+# hagyd üresen, különben a gomb 404-re mutat.
+public_url = "https://gyuri125.github.io/map-plusz-watcher/"
 
 # A CI-ben nem írunk a nyilvános action logba teljes üzenetet.
 [notifiers.console]

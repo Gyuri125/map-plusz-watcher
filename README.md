@@ -79,6 +79,39 @@ Discordon ugyanez **mezőkre bontott kártyaként** jelenik meg, a fontos
 adatokkal és kattintható gombokkal. A Telegram-üzenetben a címkék
 félkövérek, alatta szintén gombok vannak.
 
+### Grafikon az értesítésekben
+
+Az eseményértesítésekhez és a `quick` helyzetjelentéshez **PNG grafikon**
+csatolódik:
+
+- a MÁP+ sorozatok induláskori **EHM-története**,
+- a **MÁP+, FixMÁP, PMÁP és BMÁP** aktuális kamatainak összehasonlítása.
+
+Discordon a kártyán belül, Telegramon külön fotóként jelenik meg. A
+grafikon nem kell a működéshez: ha a Pillow csomag nincs telepítve, a
+szöveges értesítés akkor is elmegy. Telepítés:
+
+```powershell
+pip install pillow
+```
+
+vagy a csomagból:
+
+```powershell
+pip install ".[charts]"
+```
+
+Kikapcsolás a `config.toml`-ban:
+
+```toml
+[app]
+attach_chart = false
+```
+
+![Grafikon az értesítésben](docs/chart-preview.png)
+
+*A Discord/Telegram üzenethez csatolt grafikon mintája.*
+
 ## Dashboard (helyben vagy GitHub Pages)
 
 Helyben a `scripts\run_local.bat` vagy a `quick --dashboard --open`
@@ -104,11 +137,11 @@ A dashboard ugyanezt az adatot mutatja böngészőben:
 *Az összehasonlító táblázat és a hozamkalkulátor a dashboard alsó részén.*
 
 A dashboard alapból helyben készül el. Ha online is szeretnéd, a
-`Dashboard` workflow manuálisan publikálja GitHub Pages artifactként,
-nem commitol a repóba. A naptárfájl a dashboardról tölthető le:
-`map-plusz.ics`. A Discord és Telegram **Dashboard** gombja csak akkor
-jelenik meg, ha az `[app] public_url` be van állítva; a **Naptárba**
-gomb szintén ehhez a nyilvános címhez kötődik.
+**Dashboard** workflow manuálisan publikálja GitHub Pages artifactként,
+nem commitol a repóba. A naptárfájl a dashboardról
+tölthető le: `map-plusz.ics`. A Discord és Telegram **Dashboard** gombja
+csak akkor jelenik meg, ha az `[app] public_url` be van állítva; a
+**Naptárba** gomb szintén ehhez a nyilvános címhez kötődik.
 
 A Pages első engedélyezése kézi lépés:
 
@@ -117,6 +150,13 @@ A Pages első engedélyezése kézi lépés:
 Ezután a dashboard itt érhető el:
 
 **https://gyuri125.github.io/map-plusz-watcher/**
+
+A GitHub Pages **nyilvános repóhoz ingyenes, időkorlát nélkül**. A
+hivatalos soft limitek: 1 GB publikált oldalméret, 100 GB forgalom
+havonta és 10 build óránként. Ez a dashboard néhány tíz KB, manuális
+vagy napi frissítéssel, tehát messze a limitek alatt van. Nyilvános
+repóban a GitHub Actions standard futói is ingyenesek. Privát repóhoz a
+Pages csak fizetős GitHub-csomaggal érhető el.
 
 ---
 
@@ -241,10 +281,10 @@ A Pages forrást állítsd **GitHub Actions**-ra:
 **Settings > Pages > Build and deployment > Source: GitHub Actions**
 
 Utána az **Actions > Dashboard > Run workflow** paranccsal publikálhatod.
-A workflow alapból manuális; ha napi automatikus frissítést szeretnél,
-a kommentelt `schedule` blokkot kapcsold vissza. A dashboard a
-`config.site.toml` fájlt használja, amely nem tartalmaz titkot, és a
-generált `site/` mappát artifactként tölti fel.
+A workflow alapból manuális; ha napi automatikus frissítést szeretnél, a
+kommentelt `schedule` blokkot kapcsold vissza.
+A dashboard a `config.site.toml` fájlt használja, amely nem tartalmaz
+titkot, és a generált `site/` mappát artifactként tölti fel.
 
 Helyben ugyanez a `python -m allampapir_ertesito dashboard` paranccsal
 vagy a `scripts\run_local.bat`-tal érhető el.
@@ -394,9 +434,9 @@ Unregister-ScheduledTask -TaskName "MapPluszNapi" -Confirm:$false
 ```
 
 A teljes dashboardot a feladat nem nyitja meg (az pop-up lenne); ha látni
-akarod, nyisd meg kézzel a `site/index.html` fájlt. Ha a teljes nézetet a
-telefonon is látni szeretnéd, ahhoz GitHub Pages vagy képcsatolmány kell;
-a csendes task csak a szöveges eseményértesítéseket küldi.
+akarod, nyisd meg kézzel a `site/index.html` fájlt. A telefonos nézethez
+a GitHub Pages link vagy a csatolt grafikon szolgál; a csendes task a
+szöveges eseményértesítéseket és a PNG grafikont küldi.
 
 ## Helyi használat
 
@@ -413,6 +453,12 @@ Python **3.11 vagy újabb** kell. Ellenőrzés:
 
 ```powershell
 python --version
+```
+
+A grafikonos értesítésekhez opcionális csomag:
+
+```powershell
+pip install pillow
 ```
 
 ### 2. Config létrehozása
@@ -507,6 +553,7 @@ Fontosabb `[app]` kulcsok:
 | `announce_new_offerings` | `true` | Küldjön-e értesítést kihirdetéskor. |
 | `notify_on_start` | `true` | Küldjön-e értesítést az indulás napján. |
 | `ending_soon_days` | `14` | Ennyi nappal az utolsó vásárlási nap előtt jelezzen. `0` = kikapcsolva. |
+| `attach_chart` | `true` | Csatoljon-e PNG grafikont az értesítésekhez. Pillow kell hozzá. |
 | `notify_on_error` | `false` | Küldjön-e hibát, ha mindkét forrás elérhetetlen. |
 | `state_file` | `state.json` | Duplikációvédelem állapotfájlja. |
 | `log_file` | `logs/allampapir.log` | Naplófájl; üresen hagyva nincs fájlnapló. |
@@ -686,7 +733,7 @@ A tesztek nem hálózatoznak; hamis adatokkal ellenőrzik a feldolgozást,
 a kétfázisú értesítést, a duplikációvédelmet, a Discord/Telegram payloadot,
 a `.env` betöltést, a dashboardot, a naptárfájlt, a setup segédfüggvényeit,
 a Telegram chat-felderítést, a lejárat előtti figyelmeztetést és az
-emlékeztetőt. Jelenleg 59 unittest fut.
+emlékeztetőt. Jelenleg 64 unittest fut.
 
 A GitHubon a `Tesztek` workflow push és pull request esetén automatikusan
 lefut Ubuntu és Windows alatt is.

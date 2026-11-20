@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import io
 import json
+import tempfile
 import unittest
 import urllib.error
+from dataclasses import replace
 from datetime import date, datetime
+from pathlib import Path
 from unittest.mock import patch
 
 from allampapir_ertesito.config import (
@@ -15,11 +18,12 @@ from allampapir_ertesito.config import (
 )
 from allampapir_ertesito.messages import build_announcement
 from allampapir_ertesito.models import Message, SeriesInfo
+from allampapir_ertesito.notifiers.base import NotifierManager
 from allampapir_ertesito.notifiers.discord import DiscordNotifier
 from allampapir_ertesito.notifiers.ntfy import NtfyNotifier
 from allampapir_ertesito.notifiers.telegram import TelegramNotifier
 from allampapir_ertesito.notifiers.webhook import WebhookNotifier
-from tests.helpers import make_offering, make_retail
+from tests.helpers import FakeNotifier, make_offering, make_retail
 
 
 class FakeResponse:
@@ -144,6 +148,73 @@ class NotifierTests(unittest.TestCase):
         self.assertIn("WebKincstár", labels)
         self.assertNotIn("Dashboard", labels)
         self.assertNotIn("Naptárba", labels)
+
+    def _chart_file(self) -> Path:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "chart.png"
+        path.write_bytes(b"\x89PNG\r\n\x1a\nfake-image")
+        return path
+
+    @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")
+    def test_discord_attaches_chart_as_multipart(self, urlopen) -> None:
+        urlopen.return_value = FakeResponse()
+        settings = DiscordSettings(
+            enabled=True,
+            webhook_url="https://discord.com/api/webhooks/123/abc",
+        )
+        message = replace(sample_message(), image_path=self._chart_file())
+        DiscordNotifier(settings).send(message)
+
+        request = urlopen.call_args[0][0]
+        headers = {key.lower(): value for key, value in request.header_items()}
+        self.assertTrue(headers["content-type"].startswith("multipart/form-data"))
+        self.assertIn(b'name="payload_json"', request.data)
+        self.assertIn(b'filename="chart.png"', request.data)
+        self.assertIn(b"attachment://chart.png", request.data)
+
+    @patch("allampapir_ertesito.notifiers.telegram.urllib.request.urlopen")
+    def test_telegram_sends_chart_as_photo(self, urlopen) -> None:
+        urlopen.side_effect = [
+            FakeResponse(b'{"ok": true}'),
+            FakeResponse(b'{"ok": true}'),
+        ]
+        settings = TelegramSettings(
+            enabled=True,
+            bot_token="123:abc",
+            chat_id="456",
+        )
+        message = replace(sample_message(), image_path=self._chart_file())
+        TelegramNotifier(settings).send(message)
+
+        self.assertEqual(urlopen.call_count, 2)
+        photo_request = urlopen.call_args_list[1][0][0]
+        self.assertIn("/sendPhoto", photo_request.full_url)
+        headers = {key.lower(): value for key, value in photo_request.header_items()}
+        self.assertTrue(headers["content-type"].startswith("multipart/form-data"))
+        self.assertIn(b'name="photo"', photo_request.data)
+        self.assertIn(b'filename="chart.png"', photo_request.data)
+
+    def test_manager_attaches_chart_once_per_cycle(self) -> None:
+        chart = self._chart_file()
+        notifier = FakeNotifier()
+        calls: list[int] = []
+
+        def provide() -> Path:
+            calls.append(1)
+            return chart
+
+        manager = NotifierManager([notifier], attachment_provider=provide)
+        manager.begin_cycle()
+        manager.send(sample_message())
+        manager.send(sample_message())
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(notifier.messages[0].image_path, chart)
+        self.assertEqual(notifier.messages[1].image_path, chart)
+
+        manager.begin_cycle()
+        manager.send(sample_message())
+        self.assertEqual(len(calls), 2)
 
     @patch("allampapir_ertesito.notifiers.discord.urllib.request.urlopen")
     def test_discord_retries_without_components_on_400(self, urlopen) -> None:

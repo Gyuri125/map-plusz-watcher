@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
+from pathlib import Path
 
 from ..models import Message
 
@@ -39,16 +41,49 @@ class DispatchResult:
 
 
 class NotifierManager:
-    def __init__(self, notifiers: list[Notifier]) -> None:
+    def __init__(
+        self,
+        notifiers: list[Notifier],
+        attachment_provider: Callable[[], Path | None] | None = None,
+    ) -> None:
         self.notifiers = notifiers
+        self.attachment_provider = attachment_provider
+        self._attachment: Path | None = None
+        self._attachment_ready = False
 
     @property
     def names(self) -> list[str]:
         return [notifier.name for notifier in self.notifiers]
 
+    def begin_cycle(self) -> None:
+        """Új ellenőrzési ciklus: a csatolmányt újra kell kérni."""
+        self._attachment = None
+        self._attachment_ready = False
+
+    def _get_attachment(self) -> Path | None:
+        if self._attachment_ready:
+            return self._attachment
+        self._attachment_ready = True
+        if self.attachment_provider is None:
+            return None
+        try:
+            attachment = self.attachment_provider()
+        except Exception as exc:
+            logger.warning("A grafikon előállítása sikertelen: %s", exc)
+            return None
+        if attachment is not None and not Path(attachment).is_file():
+            logger.warning("A grafikonfájl nem található: %s", attachment)
+            return None
+        self._attachment = Path(attachment) if attachment is not None else None
+        return self._attachment
+
     def send(self, message: Message) -> DispatchResult:
         result = DispatchResult()
         real_notifiers = [item for item in self.notifiers if not item.is_console]
+
+        attachment = self._get_attachment()
+        if attachment is not None:
+            message = replace(message, image_path=attachment)
 
         for notifier in self.notifiers:
             try:

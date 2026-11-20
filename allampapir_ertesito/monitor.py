@@ -140,6 +140,7 @@ class Monitor:
         state = self.state_store.load()
         first_run = state.is_empty
         outcome = CheckOutcome(dry_run=dry_run, first_run=first_run)
+        self.notifiers.begin_cycle()
 
         logger.info("Ellenőrzés: %s", today.isoformat())
 

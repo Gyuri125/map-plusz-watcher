@@ -26,6 +26,10 @@ notify_on_start = true
 # 0 = kikapcsolva.
 ending_soon_days = 14
 
+# Csatoljon-e képet (PNG) az értesítésekhez az EHM-történetről és a
+# többi állampapírról. Ehhez kell a Pillow csomag: pip install pillow
+attach_chart = true
+
 # Ha mindkét adatforrás hibára fut, küldjön-e hibaértesítést
 # (legfeljebb 24 óránként egyszer).
 notify_on_error = false

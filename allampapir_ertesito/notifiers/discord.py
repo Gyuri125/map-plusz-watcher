@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 from ..config import DiscordSettings
 from ..messages import (
@@ -16,8 +18,11 @@ from ..messages import (
     WEBKINCSTAR_URL,
 )
 from ..models import Message, SeriesInfo
+from ..multipart import encode_multipart
 from ..util import format_date_hu, format_datetime_hu, format_percent, format_rate_range
 from .base import Notifier, NotifierError
+
+logger = logging.getLogger("allampapir.notify")
 
 # A Discord webhookok előtt Cloudflare áll; a Python alap User-Agent
 # (Python-urllib/x.y) esetenként 403/1010 hibát kap. Saját, beszédes
@@ -65,7 +70,87 @@ class DiscordNotifier(Notifier):
         if components:
             payload["components"] = [{"type": 1, "components": components}]
 
-        self._execute(payload, use_components=bool(components))
+        image_path = message.image_path
+        if image_path is not None:
+            embed["image"] = {"url": "attachment://chart.png"}
+            payload["attachments"] = [{"id": 0, "filename": "chart.png"}]
+
+        self._deliver(payload, use_components=bool(components), image_path=image_path)
+
+    def _deliver(
+        self,
+        payload: dict[str, object],
+        use_components: bool,
+        image_path: Path | None,
+    ) -> None:
+        if image_path is None:
+            self._execute(payload, use_components=use_components)
+            return
+        try:
+            self._execute_multipart(payload, use_components, image_path)
+        except NotifierError as exc:
+            logger.warning(
+                "Discord: a grafikon csatolása sikertelen, szövegként küldöm: %s",
+                exc,
+            )
+            fallback = dict(payload)
+            fallback.pop("attachments", None)
+            embeds = fallback.get("embeds")
+            if isinstance(embeds, list) and embeds and isinstance(embeds[0], dict):
+                embeds[0].pop("image", None)
+            self._execute(fallback, use_components=use_components)
+
+    def _execute_multipart(
+        self,
+        payload: dict[str, object],
+        use_components: bool,
+        image_path: Path,
+    ) -> None:
+        try:
+            file_data = Path(image_path).read_bytes()
+        except OSError as exc:
+            raise NotifierError(f"Discord: a grafikon nem olvasható: {exc}") from exc
+
+        body, content_type = encode_multipart(
+            {"payload_json": json.dumps(payload, ensure_ascii=False)},
+            [("files[0]", "chart.png", "image/png", file_data)],
+        )
+        url = (
+            self._webhook_url_with_components()
+            if use_components
+            else self.settings.webhook_url
+        )
+        request = urllib.request.Request(
+            url,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": content_type,
+                "Accept": "application/json",
+                "User-Agent": USER_AGENT,
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                response.read(200)
+        except urllib.error.HTTPError as exc:
+            detail = ""
+            try:
+                detail = exc.read(500).decode("utf-8", "replace").strip()
+            except OSError:
+                pass
+            if use_components and exc.code == 400 and "component" in detail.lower():
+                fallback = dict(payload)
+                fallback.pop("components", None)
+                self._execute_multipart(fallback, False, image_path)
+                return
+            raise NotifierError(
+                f"Discord HTTP {exc.code}: {self._redact(detail or str(exc.reason))}"
+            ) from exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise NotifierError(
+                f"Discord hálózati hiba: {self._redact(str(exc))}"
+            ) from exc
 
     def _execute(self, payload: dict[str, object], use_components: bool) -> None:
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")

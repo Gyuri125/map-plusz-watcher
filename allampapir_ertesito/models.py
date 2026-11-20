@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from .util import format_percent, format_rate_range
@@ -214,6 +215,7 @@ class Message:
     body: str
     series: SeriesInfo | None = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    image_path: Path | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {

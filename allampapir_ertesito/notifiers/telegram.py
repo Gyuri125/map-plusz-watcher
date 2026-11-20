@@ -4,15 +4,20 @@ from __future__ import annotations
 
 import html
 import json
+import logging
 import re
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 from ..config import TelegramSettings
 from ..messages import PRODUCT_PAGE, WEBKINCSTAR_URL
 from ..models import Message
+from ..multipart import encode_multipart
 from ..util import truncate
 from .base import Notifier, NotifierError
+
+logger = logging.getLogger("allampapir.notify")
 
 _LABEL_LINE = re.compile(r"^(\s*)([^:\n]{1,60}):\s*(.*)$")
 
@@ -92,6 +97,68 @@ class TelegramNotifier(Notifier):
         except json.JSONDecodeError as exc:
             raise NotifierError(
                 f"A Telegram nem JSON választ adott: {self._redact(body[:200])}"
+            ) from exc
+        if not parsed.get("ok"):
+            description = parsed.get("description") or "ismeretlen hiba"
+            raise NotifierError(f"Telegram hiba: {self._redact(str(description))}")
+
+        if message.image_path is not None:
+            try:
+                self._send_photo(message.image_path)
+            except NotifierError as exc:
+                logger.warning(
+                    "Telegram: a grafikon küldése sikertelen, a szöveg elküldve: %s",
+                    exc,
+                )
+
+    def _send_photo(self, image_path: Path) -> None:
+        try:
+            file_data = Path(image_path).read_bytes()
+        except OSError as exc:
+            raise NotifierError(f"Telegram: a grafikon nem olvasható: {exc}") from exc
+
+        fields = {
+            "chat_id": self.settings.chat_id,
+            "caption": "MÁP+ EHM és összehasonlítás",
+        }
+        if self.settings.message_thread_id > 0:
+            fields["message_thread_id"] = str(self.settings.message_thread_id)
+
+        body, content_type = encode_multipart(
+            fields,
+            [("photo", "chart.png", "image/png", file_data)],
+        )
+        url = f"https://api.telegram.org/bot{self.settings.bot_token}/sendPhoto"
+        request = urllib.request.Request(
+            url,
+            data=body,
+            method="POST",
+            headers={
+                "Content-Type": content_type,
+                "Accept": "application/json",
+                "User-Agent": "AllampapirErtesito/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                raw = response.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as exc:
+            detail = ""
+            try:
+                detail = exc.read(500).decode("utf-8", "replace")
+            except OSError:
+                pass
+            raise NotifierError(
+                f"Telegram HTTP {exc.code}: {self._redact(detail)}"
+            ) from exc
+        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+            raise NotifierError(f"Telegram hálózati hiba: {exc}") from exc
+
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise NotifierError(
+                f"A Telegram nem JSON választ adott: {self._redact(raw[:200])}"
             ) from exc
         if not parsed.get("ok"):
             description = parsed.get("description") or "ismeretlen hiba"
