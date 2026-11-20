@@ -171,9 +171,15 @@ helyőrzők vannak, valódi titkok nincsenek.
 | `TELEGRAM_BOT_TOKEN` | igen, ha a Telegram be van kapcsolva | A @BotFather által adott bot token. |
 | `TELEGRAM_CHAT_ID` | igen, ha a Telegram be van kapcsolva | A cél chat/csatorna azonosítója. |
 
-A `config.ci.toml` alapértelmezésben **mindkét** csatornát bekapcsolja.
-Ha csak az egyiket használod, a másikat állítsd `enabled = false` értékre,
-és a hozzá tartozó secretet nem kell beállítanod.
+A `config.ci.toml` alapból csak a Discordot használja; a Telegram ott
+`enabled = false`. Ha csak Discordot használsz, a `DISCORD_WEBHOOK_URL`
+secret elég. Ha a Telegramot is akarod, a `TELEGRAM_BOT_TOKEN` mellett a
+`TELEGRAM_CHAT_ID` secret is kell, és a configban állítsd
+`enabled = true`-ra.
+
+A GitHub secretök **csak az Actionsben** élnek. A laptopos futtatáshoz a
+config melletti `.env` fájl kell; a kettő független. Ha mindkét helyen
+használod, ugyanazokat az értékeket tedd be a secretökbe és a `.env`-be is.
 
 ### 2. Első futtatás
 

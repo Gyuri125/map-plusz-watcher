@@ -42,9 +42,10 @@ webhook_url = "${DISCORD_WEBHOOK_URL}"
 username = "MÁP+ értesítő"
 
 [notifiers.telegram]
-# Ha nincs TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secret, állítsd
-# enabled = false-ra.
-enabled = true
+# Alapból ki van kapcsolva, mert a Telegramhoz a bot token mellett
+# a TELEGRAM_CHAT_ID secret is kell. Ha mindkettő megvan, állítsd
+# enabled = true-ra.
+enabled = false
 bot_token = "${TELEGRAM_BOT_TOKEN}"
 chat_id = "${TELEGRAM_CHAT_ID}"
 message_thread_id = 0
