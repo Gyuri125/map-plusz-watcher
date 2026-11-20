@@ -363,8 +363,8 @@ def _chart_svg(history: list[RetailSeries]) -> str:
             f"{_e(format_date_hu(points[0][0]))} – {_e(format_percent(points[0][1]))}.</p>"
         )
 
-    width, height = 900, 270
-    left, right, top, bottom = 58, 22, 20, 38
+    width, height = 900, 320
+    left, right, top, bottom = 58, 28, 24, 74
     plot_w = width - left - right
     plot_h = height - top - bottom
     values = [item[1] for item in points]
@@ -393,6 +393,14 @@ def _chart_svg(history: list[RetailSeries]) -> str:
             f'fill="#949ba4" font-size="11">{_e(format_percent(value))}</text>'
         )
 
+    # Függőleges segédvonalak minden sorozat indulásánál.
+    for index in range(len(points)):
+        x = x_pos(index)
+        grid_parts.append(
+            f'<line x1="{x:.1f}" y1="{top}" x2="{x:.1f}" y2="{top + plot_h}" '
+            'stroke="#33363b" stroke-width="1" />'
+        )
+
     coords = [(x_pos(index), y_pos(value)) for index, (_, value, _) in enumerate(points)]
     line_path = "M " + " L ".join(f"{x:.1f},{y:.1f}" for x, y in coords)
     base_y = top + plot_h
@@ -402,6 +410,7 @@ def _chart_svg(history: list[RetailSeries]) -> str:
         + f" L {coords[-1][0]:.1f},{base_y:.1f} Z"
     )
     circles = []
+    value_labels = []
     for index, (point_date, value, name) in enumerate(points):
         x, y = coords[index]
         circles.append(
@@ -409,15 +418,32 @@ def _chart_svg(history: list[RetailSeries]) -> str:
             f"<title>{_e(name)} – {_e(format_date_hu(point_date))}: {_e(format_percent(value))}</title>"
             "</circle>"
         )
+        label_y = y - 10
+        if label_y < top + 10:
+            label_y = y + 16
+        value_labels.append(
+            f'<text x="{x:.1f}" y="{label_y:.1f}" text-anchor="middle" '
+            f'fill="#2ecc71" font-size="11" font-weight="600">'
+            f"{_e(format_percent(value))}</text>"
+        )
+
     labels = []
     if len(points) >= 2:
-        indexes = sorted({0, len(points) // 2, len(points) - 1})
-        for index in indexes:
-            point_date = points[index][0]
+        for index, (point_date, _, name) in enumerate(points):
             x = x_pos(index)
+            if index == 0:
+                anchor = "start"
+            elif index == len(points) - 1:
+                anchor = "end"
+            else:
+                anchor = "middle"
             labels.append(
-                f'<text x="{x:.1f}" y="{height - 12}" text-anchor="middle" '
-                f'fill="#949ba4" font-size="11">{point_date.year}. {point_date.month:02d}.</text>'
+                f'<text x="{x:.1f}" y="{height - 38}" text-anchor="{anchor}" '
+                f'fill="#949ba4" font-size="10">{point_date.year}. {point_date.month:02d}.</text>'
+            )
+            labels.append(
+                f'<text x="{x:.1f}" y="{height - 18}" text-anchor="{anchor}" '
+                f'fill="#c9d1d9" font-size="10">{_e(name)}</text>'
             )
     return (
         f'<svg viewBox="0 0 {width} {height}" role="img" '
@@ -431,6 +457,7 @@ def _chart_svg(history: list[RetailSeries]) -> str:
         + f'<path d="{line_path}" fill="none" stroke="#2ecc71" stroke-width="2.5" '
         'stroke-linejoin="round" stroke-linecap="round" />'
         + "".join(circles)
+        + "".join(value_labels)
         + "".join(labels)
         + "</svg>"
     )
