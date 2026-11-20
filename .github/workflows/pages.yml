@@ -1,10 +1,10 @@
 name: Dashboard
 
 on:
-  # Alapból manuális. Automatikus frissítéshez vedd fel a schedule blokkot:
-  # schedule:
-  #   - cron: "15 6 * * *"
-  #   - cron: "15 15 * * *"
+  # Napi automatikus frissítés. A dashboard build nem küld értesítést.
+  # Ha nem akarod, töröld a schedule blokkot.
+  schedule:
+    - cron: "15 6 * * *"
   workflow_dispatch:
 
 permissions:

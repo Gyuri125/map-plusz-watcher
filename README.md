@@ -7,7 +7,8 @@
 > Discord/Telegram alerts when they are announced, when they become
 > available for purchase, and before the sales period ends. The local
 > scheduled check runs daily but only sends a message when something
-> changes. GitHub Actions workflows are optional and manual.
+> changes. GitHub Actions workflows are optional; the Pages dashboard
+> refreshes daily.
 
 Magyar állampapír-figyelő, kifejezetten a **MÁP+ (Magyar Állampapír Plusz)**
 sorozatokra. Nem híreket gyűjt, nem híroldalakat scrape-el: kizárólag az ÁKK
@@ -24,8 +25,9 @@ A cél, hogy időben tudd:
 
 Az értesítések **Discordra és Telegramra** mennek. A figyelő helyben,
 egyetlen paranccsal vagy a `scripts\run_local.bat` dupla kattintásával
-futtatható; az értesítő és dashboard GitHub Actions workflow-k
-opcionálisak és manuálisak. A tesztek push/PR esetén automatikusan futnak.
+futtatható; az értesítő GitHub Actions workflow manuális, a Pages
+dashboard viszont naponta automatikusan frissül. A tesztek push/PR esetén
+automatikusan futnak.
 A dashboard, a kamatgrafikon, az összehasonlítás és a naptárletöltés
 helyben is elérhető, GitHub Pages használatával pedig online is.
 
@@ -280,9 +282,9 @@ A Pages forrást állítsd **GitHub Actions**-ra:
 
 **Settings > Pages > Build and deployment > Source: GitHub Actions**
 
-Utána az **Actions > Dashboard > Run workflow** paranccsal publikálhatod.
-A workflow alapból manuális; ha napi automatikus frissítést szeretnél, a
-kommentelt `schedule` blokkot kapcsold vissza.
+A workflow naponta egyszer automatikusan frissíti a dashboardot, és az
+**Actions > Dashboard > Run workflow** paranccsal kézzel is indíthatod.
+Ha nem szeretnéd a napi frissítést, töröld a `schedule` blokkot.
 A dashboard a `config.site.toml` fájlt használja, amely nem tartalmaz
 titkot, és a generált `site/` mappát artifactként tölti fel.
 
@@ -680,8 +682,9 @@ Részletek: [`SECURITY.md`](SECURITY.md).
   repókban automatikusan letilthatja az ütemezett workflow-kat. Ilyenkor
   az Actions oldalon engedélyezd újra, és tölts fel egy apró commitot
   (vagy nyiss egy issue-t/PR-t), hogy a repó ismét aktívnak számítson.
-- A dashboard és a naptár helyben is elérhető; a GitHub Pages publikálás
-  opcionális, és a Pages első engedélyezése kézi lépés.
+- A dashboard és a naptár helyben is elérhető; a GitHub Pages
+  publikáláshoz a Settings > Pages alatt a GitHub Actions forrást kell
+  kiválasztani.
 - A naptárfájl az aktuális és a már kihirdetett következő sorozatokat
   tartalmazza, a korábbiakat nem.
 - A hozamkalkulátor az első évi kamattal számoló becslés, nem teljes
