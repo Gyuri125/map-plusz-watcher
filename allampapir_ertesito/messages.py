@@ -166,6 +166,63 @@ def build_start(series: SeriesInfo, today: date) -> Message:
     return Message(event="start", title=title, body="\n".join(lines), series=series)
 
 
+def build_ending_soon(
+    series: SeriesInfo,
+    today: date,
+    upcoming: SeriesInfo | None = None,
+    last_day: bool = False,
+) -> Message:
+    end_text = format_date_hu(series.end) if series.end else "hamarosan"
+    if last_day:
+        title = f"Utolsó vásárlási nap: {series.name} MÁP+"
+        intro = (
+            f"Ma van az utolsó nap, amikor a(z) {series.name} MÁP+ sorozat "
+            "még megvásárolható."
+        )
+    else:
+        days = (series.end - today).days if series.end else 0
+        title = f"Hamarosan véget ér: {series.name} MÁP+"
+        intro = (
+            f"A(z) {series.name} MÁP+ sorozat értékesítése hamarosan véget ér. "
+            f"Utolsó vásárlási nap: {end_text} ({days} nap múlva)."
+        )
+
+    lines = [intro, "", *_series_details(series, today=today), ""]
+    if upcoming is not None:
+        lines.append("Következő sorozat:")
+        lines.extend(
+            _series_details(
+                upcoming,
+                include_published=True,
+                today=today,
+            )
+        )
+        if not format_rate_range(upcoming.rate):
+            lines.append("  A következő sorozat kamata még nem ismert.")
+        lines.extend(
+            [
+                "",
+                "Ha a jelenlegi sorozat kamata jobb, az utolsó vásárlási napig "
+                "még megvásárolható. Döntés előtt hasonlítsd össze a hivatalos "
+                "kamat- és EHM-adatokat.",
+            ]
+        )
+        lines.append("")
+
+    lines.extend(
+        [
+            PAYMENT_NOTE,
+            "",
+            *_purchase_lines(),
+            "",
+            *_info_lines(series),
+            "",
+            _disclaimer(),
+        ]
+    )
+    return Message(event="ending", title=title, body="\n".join(lines), series=series)
+
+
 def build_first_run(
     active: SeriesInfo | None,
     upcoming: list[SeriesInfo],
@@ -176,7 +233,8 @@ def build_first_run(
         "A MÁP+ értesítő elindult.",
         "",
         "Mostantól értesítést küldök, amikor az ÁKK új MÁP+ sorozatot hirdet "
-        "meg, és amikor egy sorozat megvásárolhatóvá válik.",
+        "meg, amikor egy sorozat megvásárolhatóvá válik, és amikor a "
+        "jelenlegi sorozat utolsó vásárlási napja közeledik.",
         "",
     ]
     if active:
@@ -206,7 +264,8 @@ def build_first_run(
     lines.extend(
         [
             "Ez az első összefoglaló. A következő értesítés új sorozat "
-            "kihirdetésekor vagy indulásakor jön.",
+            "kihirdetésekor, indulásakor vagy a vásárlási időszak végéhez "
+            "közeledve jön.",
         ]
     )
     series_for_message = active or (upcoming[0] if upcoming else None)
@@ -301,8 +360,8 @@ def build_test() -> Message:
         "Ha ezt látod, az értesítési csatorna működik.",
         "",
         "A figyelő a következő ellenőrzéskor valós adatokat keres az ÁKK "
-        "nyilvános adatforrásaiban, és csak új sorozat vagy indulás esetén "
-        "küld értesítést.",
+        "nyilvános adatforrásaiban, és csak új sorozat, indulás vagy a "
+        "vásárlási időszak vége előtt küld értesítést.",
         "",
         f"MÁP+ termékoldal: {PRODUCT_PAGE}",
     ]

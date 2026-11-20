@@ -20,6 +20,7 @@
 first_run_notify = true
 announce_new_offerings = true
 notify_on_start = true
+ending_soon_days = 14
 notify_on_error = true
 state_file = "state.json"
 log_file = ""

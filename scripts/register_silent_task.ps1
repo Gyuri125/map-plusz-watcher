@@ -57,7 +57,7 @@ if ([System.IO.Path]::GetFileName($Python) -ne "pythonw.exe") {
     }
 }
 
-$argument = "-m allampapir_ertesito quick --config `"$Config`" --dashboard --no-calculator"
+$argument = "-m allampapir_ertesito check --config `"$Config`" --dashboard --no-calculator"
 $action = New-ScheduledTaskAction `
     -Execute $Python `
     -Argument $argument `

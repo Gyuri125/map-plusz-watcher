@@ -27,6 +27,7 @@ USER_AGENT = "MapPluszWatcher/1.0 (+https://github.com/Gyuri125/map-plusz-watche
 _COLORS = {
     "announcement": 0x3498DB,
     "start": 0x2ECC71,
+    "ending": 0xE67E22,
     "reminder": 0xE67E22,
     "error": 0xE74C3C,
     "first_run": 0x9B59B6,

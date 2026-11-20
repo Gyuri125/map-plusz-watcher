@@ -92,6 +92,9 @@ class State:
     last_check: datetime | None = None
     announced: list[str] = field(default_factory=list)
     started: list[str] = field(default_factory=list)
+    # Sorozat neve -> az utolsó figyelmeztetésnél hátralévő napok száma.
+    # Így a 14 napos figyelmeztetés után az utolsó napon még egyszer szólunk.
+    ending_alerts: dict[str, int] = field(default_factory=dict)
     pending_reminders: list[PendingReminder] = field(default_factory=list)
     last_error_notified: datetime | None = None
     last_active: dict[str, Any] | None = None
@@ -103,6 +106,7 @@ class State:
             self.last_check is None
             and not self.announced
             and not self.started
+            and not self.ending_alerts
             and not self.pending_reminders
         )
 
@@ -117,6 +121,16 @@ class State:
 
     def was_started(self, name: str) -> bool:
         return name in self.started
+
+    def needs_ending_alert(self, name: str, days_left: int) -> bool:
+        previous = self.ending_alerts.get(name)
+        if previous is None:
+            return True
+        # A lejárat előtti figyelmeztetés után az utolsó napon is szólunk.
+        return days_left == 0 and previous != 0
+
+    def mark_ending_alert(self, name: str, days_left: int) -> None:
+        self.ending_alerts[name] = days_left
 
     def add_reminder(self, reminder: PendingReminder) -> None:
         for existing in self.pending_reminders:
@@ -143,6 +157,7 @@ class State:
             "last_check": self.last_check.isoformat() if self.last_check else None,
             "announced": self.announced,
             "started": self.started,
+            "ending_alerts": self.ending_alerts,
             "pending_reminders": [item.to_dict() for item in self.pending_reminders],
             "last_error_notified": (
                 self.last_error_notified.isoformat() if self.last_error_notified else None
@@ -172,11 +187,20 @@ class State:
         last_active = data.get("last_active")
         if not isinstance(last_active, dict):
             last_active = None
+        ending_alerts: dict[str, int] = {}
+        raw_ending = data.get("ending_alerts")
+        if isinstance(raw_ending, dict):
+            for name, value in raw_ending.items():
+                try:
+                    ending_alerts[str(name)] = int(value)
+                except (TypeError, ValueError):
+                    continue
         return cls(
             version=STATE_VERSION,
             last_check=_ensure_aware(parse_datetime(data.get("last_check"))),
             announced=_as_list(data.get("announced")),
             started=_as_list(data.get("started")),
+            ending_alerts=ending_alerts,
             pending_reminders=reminders,
             last_error_notified=_ensure_aware(
                 parse_datetime(data.get("last_error_notified"))

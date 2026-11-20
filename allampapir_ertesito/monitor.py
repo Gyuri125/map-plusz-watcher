@@ -10,6 +10,7 @@ from .akk import AkkClient, AkkError
 from .config import Config
 from .messages import (
     build_announcement,
+    build_ending_soon,
     build_error,
     build_first_run,
     build_reminder,
@@ -303,6 +304,21 @@ class Monitor:
         else:
             logger.debug("Az indulási értesítés ki van kapcsolva.")
 
+        # 7. A hamarosan lejáró vásárlási időszak jelzése. Ez akkor hasznos,
+        # ha a következő sorozatról már tudni lehet, de a jelenlegi még
+        # megvásárolható.
+        ending_views = list(active_views)
+        if not ending_views and retail_view is not None:
+            ending_views.append(retail_view)
+        self._notify_ending_soon(
+            state,
+            ending_views,
+            future_views,
+            today,
+            dry_run,
+            outcome,
+        )
+
         state.last_check = now
         if current_view is not None:
             state.last_active = current_view.to_dict()
@@ -311,6 +327,49 @@ class Monitor:
             self._save_state(state)
 
         return outcome
+
+    def _notify_ending_soon(
+        self,
+        state: State,
+        active_views: list[SeriesInfo],
+        future_views: list[SeriesInfo],
+        today: date,
+        dry_run: bool,
+        outcome: CheckOutcome,
+    ) -> None:
+        threshold = self.config.app.ending_soon_days
+        if threshold <= 0:
+            logger.debug("A lejárat előtti figyelmeztetés ki van kapcsolva.")
+            return
+
+        upcoming = future_views[0] if future_views else None
+        if upcoming is not None and any(
+            view.name == upcoming.name for view in active_views
+        ):
+            upcoming = None
+
+        for view in active_views:
+            if view.end is None:
+                continue
+            days_left = (view.end - today).days
+            if days_left < 0 or days_left > threshold:
+                continue
+            if not state.needs_ending_alert(view.name, days_left):
+                continue
+            message = build_ending_soon(
+                view,
+                today=today,
+                upcoming=upcoming,
+                last_day=days_left == 0,
+            )
+            outcome.messages.append(message)
+            if self._dispatch(message, dry_run, outcome):
+                state.mark_ending_alert(view.name, days_left)
+                logger.info(
+                    "Lejárat előtti figyelmeztetés: %s (%d nap)",
+                    view.name,
+                    days_left,
+                )
 
     def _process_reminders(
         self,

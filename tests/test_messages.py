@@ -5,6 +5,7 @@ from datetime import date, datetime
 
 from allampapir_ertesito.messages import (
     build_announcement,
+    build_ending_soon,
     build_first_run,
     build_start,
     build_status,
@@ -54,6 +55,18 @@ class MessageTests(unittest.TestCase):
         self.assertIn("Ma válik vásárolhatóvá", message.title)
         self.assertIn("ma már megvásárolható", message.body)
         self.assertIn("Hátralévő idő: 91 nap", message.body)
+
+    def test_ending_soon_contains_last_day_and_next_series(self) -> None:
+        message = build_ending_soon(
+            self._series(),
+            date(2026, 12, 17),
+            upcoming=self._series(future=True),
+        )
+        self.assertEqual(message.event, "ending")
+        self.assertIn("2031/M6", message.title)
+        self.assertIn("Utolsó vásárlási nap: 2026. 12. 31.", message.body)
+        self.assertIn("2031/M7", message.body)
+        self.assertIn("2027. 01. 04.", message.body)
 
     def test_announcement_has_countdown(self) -> None:
         message = build_announcement(self._series(future=True), date(2026, 12, 28))

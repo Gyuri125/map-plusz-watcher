@@ -70,6 +70,7 @@ class MonitorTests(unittest.TestCase):
         self.assertEqual(again.messages, [])
 
     def test_announcement_then_start_and_no_duplicates(self) -> None:
+        self.config.app.ending_soon_days = 0
         m6 = self._m6()
         retail_m6 = self._retail_m6()
         m7 = make_offering(
@@ -174,6 +175,83 @@ class MonitorTests(unittest.TestCase):
         clock.current = utc(2027, 1, 5, 11, 0)
         duplicate = monitor.check()
         self.assertEqual(duplicate.messages, [])
+
+    def test_ending_soon_alert_and_last_day_are_not_repeated(self) -> None:
+        self.store.save(
+            State(
+                last_check=utc(2026, 12, 10),
+                started=["2031/M6"],
+                announced=["2031/M6"],
+            )
+        )
+        client = FakeClient([self._m6()], [self._retail_m6()])
+        clock = FakeClock(utc(2026, 12, 17))
+        monitor = Monitor(
+            self.config,
+            client,  # type: ignore[arg-type]
+            self.manager,
+            self.store,
+            clock=clock,
+        )
+
+        first = monitor.check()
+        self.assertEqual([item.event for item in first.messages], ["ending"])
+        self.assertIn("2031/M6", first.messages[0].title)
+        self.assertIn("Utolsó vásárlási nap", first.messages[0].body)
+        self.assertEqual(self.store.load().ending_alerts["2031/M6"], 14)
+
+        duplicate = monitor.check()
+        self.assertEqual(duplicate.messages, [])
+
+        clock.current = utc(2026, 12, 30)
+        self.assertEqual(monitor.check().messages, [])
+
+        clock.current = utc(2026, 12, 31)
+        last_day = monitor.check()
+        self.assertEqual([item.event for item in last_day.messages], ["ending"])
+        self.assertIn("Utolsó vásárlási nap", last_day.messages[0].title)
+        self.assertIn("ma van az utolsó nap", last_day.messages[0].body.lower())
+        self.assertEqual(self.store.load().ending_alerts["2031/M6"], 0)
+
+        clock.current = utc(2027, 1, 1)
+        self.assertEqual(monitor.check().messages, [])
+
+    def test_ending_soon_alert_mentions_next_series(self) -> None:
+        self.store.save(
+            State(
+                last_check=utc(2026, 12, 10),
+                started=["2031/M6"],
+                announced=["2031/M6", "2031/M7"],
+            )
+        )
+        m7 = make_offering(
+            "2031/M7",
+            date(2027, 1, 4),
+            date(2027, 3, 31),
+            published=datetime(2026, 12, 1, 13, 30),
+        )
+        client = FakeClient([self._m6(), m7], [self._retail_m6()])
+        monitor = self._monitor(client, utc(2026, 12, 20))
+
+        outcome = monitor.check()
+        self.assertEqual([item.event for item in outcome.messages], ["ending"])
+        body = outcome.messages[0].body
+        self.assertIn("Következő sorozat:", body)
+        self.assertIn("2031/M7", body)
+        self.assertIn("2027. 01. 04.", body)
+
+    def test_ending_soon_alert_can_be_disabled(self) -> None:
+        self.config.app.ending_soon_days = 0
+        self.store.save(
+            State(
+                last_check=utc(2026, 12, 10),
+                started=["2031/M6"],
+                announced=["2031/M6"],
+            )
+        )
+        client = FakeClient([self._m6()], [self._retail_m6()])
+        monitor = self._monitor(client, utc(2026, 12, 31))
+        self.assertEqual(monitor.check().messages, [])
 
     def test_dry_run_does_not_write_state_or_send(self) -> None:
         client = FakeClient([self._m6()], [self._retail_m6()])

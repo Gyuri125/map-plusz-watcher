@@ -4,8 +4,10 @@
 ![Tesztek](https://github.com/Gyuri125/map-plusz-watcher/actions/workflows/tests.yml/badge.svg)
 
 > **English:** Watches new Hungarian MÁP+ government bond series and sends
-> Discord/Telegram alerts when they are announced and when they become
-> available for purchase. Runs twice a day on GitHub Actions.
+> Discord/Telegram alerts when they are announced, when they become
+> available for purchase, and before the sales period ends. The local
+> scheduled check runs daily but only sends a message when something
+> changes. GitHub Actions workflows are optional and manual.
 
 Magyar állampapír-figyelő, kifejezetten a **MÁP+ (Magyar Állampapír Plusz)**
 sorozatokra. Nem híreket gyűjt, nem híroldalakat scrape-el: kizárólag az ÁKK
@@ -15,6 +17,7 @@ A cél, hogy időben tudd:
 
 - **mikor jelenik meg** egy új MÁP+ sorozat,
 - **mikor és meddig vásárolható**,
+- **mikor közeledik az utolsó vásárlási nap**, amíg a régi sorozat még kapható,
 - **mennyiért** vehető meg (kamat, EHM, vételár),
 - **mit tud** a termék (futamidő, kamatozás, címlet, kamatfizetés),
 - melyik hivatalos dokumentumban vannak a részletek.
@@ -26,8 +29,8 @@ opcionálisak és manuálisak. A tesztek push/PR esetén automatikusan futnak.
 A dashboard, a kamatgrafikon, az összehasonlítás és a naptárletöltés
 helyben is elérhető, GitHub Pages használatával pedig online is.
 
-Helyi gyors használat: `python -m allampapir_ertesito setup` (Discord igen,
-Telegram nem), majd `scripts\run_local.bat` dupla kattintás.
+Helyi gyors használat: `python -m allampapir_ertesito setup` (Discord és
+Telegram is bekapcsolható), majd `scripts\run_local.bat` dupla kattintás.
 
 ![MÁP+ értesítés mintája Discordon](docs/discord-preview.png)
 
@@ -357,9 +360,24 @@ A feladat `pythonw.exe`-vel fut, ezért:
 
 - nincs konzolablak,
 - nem nyit böngészőt,
-- elküldi a helyzetjelentést a bekapcsolt Discord/Telegram csatornákra,
+- csak akkor küld Discord/Telegram üzenetet, ha van új esemény,
 - csendben frissíti a helyi dashboardot (`site/index.html`),
 - kalkulátor nélkül generálja a helyi oldalt.
+
+A napi futás tehát nem jelent napi értesítést. A figyelő az alábbi
+eseményekről szól, és ugyanarról nem ír kétszer:
+
+- új MÁP+ sorozat kihirdetése (a vásárlás kezdete előtt),
+- egy sorozat vásárolhatóvá válása,
+- a jelenlegi sorozat utolsó vásárlási napja közeledik
+  (`ending_soon_days`, alapból 14 nappal előtte),
+- eljött az utolsó vásárlási nap,
+- esedékes vásárlási emlékeztető,
+- az első futás összefoglalója.
+
+Ha nincs ilyen esemény, a feladat csak csendben frissíti a dashboardot.
+A `quick` ezzel szemben kézi parancs: az minden futáskor elküldi az
+aktuális helyzetjelentést.
 
 A feladat az aktuális felhasználóhoz jön létre, és jellemzően bejelentkezve
 fut. Ha a laptop alszik, a `StartWhenAvailable` a következő ébredéskor
@@ -378,7 +396,7 @@ Unregister-ScheduledTask -TaskName "MapPluszNapi" -Confirm:$false
 A teljes dashboardot a feladat nem nyitja meg (az pop-up lenne); ha látni
 akarod, nyisd meg kézzel a `site/index.html` fájlt. Ha a teljes nézetet a
 telefonon is látni szeretnéd, ahhoz GitHub Pages vagy képcsatolmány kell;
-a csendes task csak a szöveges helyzetjelentést küldi.
+a csendes task csak a szöveges eseményértesítéseket küldi.
 
 ## Helyi használat
 
@@ -488,6 +506,7 @@ Fontosabb `[app]` kulcsok:
 | `first_run_notify` | `true` | Első futáskor küldjön-e összefoglalót. |
 | `announce_new_offerings` | `true` | Küldjön-e értesítést kihirdetéskor. |
 | `notify_on_start` | `true` | Küldjön-e értesítést az indulás napján. |
+| `ending_soon_days` | `14` | Ennyi nappal az utolsó vásárlási nap előtt jelezzen. `0` = kikapcsolva. |
 | `notify_on_error` | `false` | Küldjön-e hibát, ha mindkét forrás elérhetetlen. |
 | `state_file` | `state.json` | Duplikációvédelem állapotfájlja. |
 | `log_file` | `logs/allampapir.log` | Naplófájl; üresen hagyva nincs fájlnapló. |
@@ -666,7 +685,8 @@ python -m unittest discover -s tests -t . -v
 A tesztek nem hálózatoznak; hamis adatokkal ellenőrzik a feldolgozást,
 a kétfázisú értesítést, a duplikációvédelmet, a Discord/Telegram payloadot,
 a `.env` betöltést, a dashboardot, a naptárfájlt, a setup segédfüggvényeit,
-a Telegram chat-felderítést és az emlékeztetőt. Jelenleg 55 unittest fut.
+a Telegram chat-felderítést, a lejárat előtti figyelmeztetést és az
+emlékeztetőt. Jelenleg 59 unittest fut.
 
 A GitHubon a `Tesztek` workflow push és pull request esetén automatikusan
 lefut Ubuntu és Windows alatt is.

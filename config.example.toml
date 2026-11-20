@@ -21,6 +21,11 @@ announce_new_offerings = true
 # A vásárolhatóvá válás napján küldjön-e értesítést.
 notify_on_start = true
 
+# Ha egy kapható sorozat értékesítési időszaka ennyi napon belül lejár,
+# küldjön-e figyelmeztetést. Az utolsó vásárlási napon külön értesítés jön.
+# 0 = kikapcsolva.
+ending_soon_days = 14
+
 # Ha mindkét adatforrás hibára fut, küldjön-e hibaértesítést
 # (legfeljebb 24 óránként egyszer).
 notify_on_error = false

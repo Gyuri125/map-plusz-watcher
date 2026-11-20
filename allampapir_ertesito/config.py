@@ -25,6 +25,7 @@ class AppSettings:
     first_run_notify: bool = True
     announce_new_offerings: bool = True
     notify_on_start: bool = True
+    ending_soon_days: int = 14
     notify_on_error: bool = False
     state_file: Path = Path("state.json")
     log_file: Path | None = Path("logs/allampapir.log")
@@ -330,6 +331,9 @@ def load_config(path: str | os.PathLike[str] | None = None) -> Config:
         first_run_notify=_as_bool(app_raw.get("first_run_notify"), True),
         announce_new_offerings=_as_bool(app_raw.get("announce_new_offerings"), True),
         notify_on_start=_as_bool(app_raw.get("notify_on_start"), True),
+        ending_soon_days=_as_int(
+            app_raw.get("ending_soon_days"), 14, "app.ending_soon_days"
+        ),
         notify_on_error=_as_bool(app_raw.get("notify_on_error"), False),
         state_file=_resolve_path(base, app_raw.get("state_file", "state.json")) or (base / "state.json"),
         log_file=_resolve_path(base, app_raw.get("log_file", "logs/allampapir.log")),
@@ -437,6 +441,8 @@ def _validate(config: Config) -> None:
         raise ConfigError("app.lookback_days értéke 30 és 3650 között legyen.")
     if not 1 <= app.announce_horizon_days <= 365:
         raise ConfigError("app.announce_horizon_days értéke 1 és 365 között legyen.")
+    if not 0 <= app.ending_soon_days <= 90:
+        raise ConfigError("app.ending_soon_days értéke 0 és 90 között legyen.")
     if not 5 <= app.http_timeout_seconds <= 120:
         raise ConfigError("app.http_timeout_seconds értéke 5 és 120 között legyen.")
 

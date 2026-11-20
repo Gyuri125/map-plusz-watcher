@@ -73,6 +73,7 @@ def make_config(tmp_path: Path, **overrides) -> Config:
         first_run_notify=True,
         announce_new_offerings=True,
         notify_on_start=True,
+        ending_soon_days=14,
         notify_on_error=False,
         state_file=tmp_path / "state.json",
         log_file=None,

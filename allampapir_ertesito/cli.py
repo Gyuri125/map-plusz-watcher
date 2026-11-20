@@ -528,6 +528,21 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="A jelenlegi/legközelebbi sorozatról akkor is értesít, ha már megtörtént.",
     )
+    check.add_argument(
+        "--dashboard",
+        action="store_true",
+        help="A helyi dashboard és naptár frissítése is.",
+    )
+    check.add_argument(
+        "--no-calculator",
+        action="store_true",
+        help="A hozamkalkulátor elhagyása a frissített dashboardról.",
+    )
+    check.add_argument(
+        "--output",
+        default="site",
+        help="Dashboard kimeneti mappa (alapértelmezés: site).",
+    )
 
     watch = subparsers.add_parser("watch", help="Folyamatos figyelés adott időközzel.")
     add_common(watch)
@@ -637,7 +652,16 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "check":
-            return run_check(config, dry_run=args.dry_run, force=args.force)
+            code = run_check(config, dry_run=args.dry_run, force=args.force)
+            if args.dashboard and not args.dry_run:
+                dashboard_code = run_dashboard(
+                    config,
+                    args.output,
+                    show_calculator=not args.no_calculator,
+                )
+                if code == 0:
+                    return dashboard_code
+            return code
         if args.command == "watch":
             return run_watch(config, args.interval_minutes)
         if args.command == "test":
