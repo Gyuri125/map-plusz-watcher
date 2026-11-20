@@ -120,6 +120,7 @@ class NotifierTests(unittest.TestCase):
         self.assertEqual(payload["username"], "MÁP+ teszt")
         self.assertEqual(payload["allowed_mentions"]["parse"], [])
         embed = payload["embeds"][0]
+        self.assertIn("MapPluszWatcher", request.get_header("User-agent"))
         self.assertIn("Új sorozat", embed["title"])
         self.assertIn("Részletek", embed["description"])
         self.assertTrue(embed["url"].endswith(".pdf"))

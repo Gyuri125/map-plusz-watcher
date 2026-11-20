@@ -19,6 +19,11 @@ from ..models import Message, SeriesInfo
 from ..util import format_date_hu, format_datetime_hu, format_percent, format_rate_range
 from .base import Notifier, NotifierError
 
+# A Discord webhookok előtt Cloudflare áll; a Python alap User-Agent
+# (Python-urllib/x.y) esetenként 403/1010 hibát kap. Saját, beszédes
+# User-Agenttel megbízhatóan működik.
+USER_AGENT = "MapPluszWatcher/1.0 (+https://github.com/Gyuri125/map-plusz-watcher)"
+
 _COLORS = {
     "announcement": 0x3498DB,
     "start": 0x2ECC71,
@@ -67,7 +72,11 @@ class DiscordNotifier(Notifier):
             self._webhook_url_with_components() if use_components else self.settings.webhook_url,
             data=data,
             method="POST",
-            headers={"Content-Type": "application/json; charset=utf-8"},
+            headers={
+                "Content-Type": "application/json; charset=utf-8",
+                "Accept": "application/json",
+                "User-Agent": USER_AGENT,
+            },
         )
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
