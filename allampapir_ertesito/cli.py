@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import logging
 import logging.handlers
+import os
 import shutil
 import sys
 import time
@@ -31,6 +33,7 @@ from .notifiers import NotifierManager, build_notifiers
 from .setup_wizard import run_setup
 from .state import StateStore
 from .summary import write_github_summary
+from .telegram_util import TelegramUtilError, extract_chats, fetch_updates
 from .util import (
     format_date_hu,
     format_datetime_hu,
@@ -45,7 +48,13 @@ LOGGER_NAME = "allampapir"
 
 
 def setup_console_encoding() -> None:
-    for stream in (sys.stdout, sys.stderr):
+    # pythonw.exe alatt nincs console, ezért a sys.stdout/sys.stderr None.
+    # Ilyenkor a csendes naplózáshoz a devnull-ra irányítjuk őket.
+    for name in ("stdout", "stderr"):
+        stream = getattr(sys, name, None)
+        if stream is None:
+            setattr(sys, name, open(os.devnull, "w", encoding="utf-8"))
+            stream = getattr(sys, name)
         try:
             stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
         except (AttributeError, OSError):
@@ -323,6 +332,12 @@ def run_quick(
 
     today = data.generated_at.date()
     manager = NotifierManager(build_notifiers(config))
+    external_channels = [name for name in manager.names if name != "console"]
+    if not external_channels:
+        logger.warning(
+            "Nincs bekapcsolt külső csatorna (Discord/Telegram); "
+            "a helyzetjelentés csak a konzolra/naplóba kerül."
+        )
     message = build_status(data.active, data.upcoming, today=today)
     print("Helyzetjelentés küldése: " + ", ".join(manager.names))
     result = manager.send(message)
@@ -350,9 +365,60 @@ def run_quick(
         if open_browser:
             webbrowser.open(index_path.resolve().as_uri())
 
+    if not external_channels:
+        logger.error(
+            "A quick parancshoz kapcsolj be legalább egy külső csatornát "
+            "(Discord vagy Telegram)."
+        )
+        return 1
     if not result.delivered:
         logger.error("A helyzetjelentés egy csatornára sem ment ki.")
         return 1
+    return 0
+
+
+def run_telegram_chat_id(config: Config) -> int:
+    token = config.telegram.bot_token
+    if not token:
+        token = getpass.getpass("Telegram bot token (nem látszik): ").strip()
+    if not token:
+        print("Nincs Telegram bot token.", file=sys.stderr)
+        return 1
+
+    try:
+        payload = fetch_updates(token, timeout=config.app.http_timeout_seconds)
+    except TelegramUtilError as exc:
+        print(f"Telegram hiba: {exc}", file=sys.stderr)
+        return 1
+
+    chats = extract_chats(payload)
+    if not chats:
+        print("Nem találtam még chatet a botnál.")
+        print()
+        print("1. Írj a csoportban valamit, például: @Papirleso_bot teszt")
+        print("2. Vagy a @BotFatherban: /setprivacy -> Disable, majd írj a botnak.")
+        print("3. Vagy add hozzá a csoporthoz a @getidsbot botot, és olvasd le az ID-t.")
+        print()
+        print("Utána futtasd újra ezt a parancsot.")
+        return 1
+
+    print("Talált Telegram chat-ek:")
+    for chat in chats:
+        print(f"  ID: {chat['id']}  |  {chat['title']}  ({chat['type']})")
+
+    target = next(
+        (chat for chat in chats if chat["type"] in {"group", "supergroup", "channel"}),
+        chats[0],
+    )
+    print()
+    print("Írd a .env fájlba:")
+    print(f"TELEGRAM_CHAT_ID={target['id']}")
+    print()
+    print("Majd a config.toml-ban kapcsold be:")
+    print("[notifiers.telegram]")
+    print("enabled = true")
+    print()
+    print("Vagy futtasd újra: python -m allampapir_ertesito setup")
     return 0
 
 
@@ -519,6 +585,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common(setup)
 
+    chat_id = subparsers.add_parser(
+        "telegram-chat-id",
+        help="A Telegram csoport chat_id felderítése a bot update-jeiből.",
+    )
+    add_common(chat_id)
+
     init = subparsers.add_parser("init", help="config.toml létrehozása a mintából.")
     init.add_argument("--config", help="A létrehozandó config.toml útvonala.")
     init.add_argument("--force", action="store_true", help="Meglévő fájl felülírása.")
@@ -568,6 +640,8 @@ def main(argv: list[str] | None = None) -> int:
                 show_calculator=not args.no_calculator,
                 output=args.output,
             )
+        if args.command == "telegram-chat-id":
+            return run_telegram_chat_id(config)
         parser.error(f"Ismeretlen parancs: {args.command}")
         return 2
     except ConfigError as exc:

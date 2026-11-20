@@ -268,25 +268,55 @@ A PDF-link az embed címére és a gombok közé is kerül.
 
 ## Telegram bot beállítása
 
+Fontos: ez a Telegram-bot **nem chatbot**. Nem válaszol `/id`, `/is`
+vagy más parancsokra, és nem kell folyamatosan futnia. A program csak
+üzenetküldésre használja a Telegram Bot API-t. Akkor fog „megjelenni”,
+amikor az első üzenetet elküldi a csoportba.
+
 1. Telegramban nyisd meg a **@BotFather** botot.
 2. `/newbot`, adj neki nevet és felhasználónevet.
-3. Jegyezd fel a kapott **bot tokent**.
-4. A saját `chat_id`-det a **@userinfobot** bot megmondja. Csoportos
-   használatnál add hozzá a botot a csoporthoz, és a csoport chat_id-jét
-   használd (általában negatív szám).
-5. GitHubon add hozzá a `TELEGRAM_BOT_TOKEN` és `TELEGRAM_CHAT_ID`
-   secretöket.
-6. Helyi teszthez a `.env` fájlba:
+3. Jegyezd fel a kapott **bot tokent**. Ha a token bárhová kikerül,
+   a BotFather `/revoke` parancsával generálj újat.
+4. Add hozzá a botot a csoporthoz.
+5. A csoport `chat_id`-jét a bot update-jeiből olvashatod ki:
+
+```powershell
+python -m allampapir_ertesito telegram-chat-id
+```
+
+Ha a token még nincs a `.env`-ben, a parancs bekéri (nem jeleníti meg).
+A csoport ID általában negatív szám, például `-1001234567890`.
+
+Ha nem talál chatet:
+
+- írj a csoportban valamit, például: `@Papirleso_bot teszt`, majd
+  futtasd újra a parancsot;
+- vagy a BotFatherban: `/setprivacy` -> `Disable`, majd írj a botnak;
+- vagy add hozzá a csoporthoz a `@getidsbot` botot, és olvasd le az ID-t.
+
+6. Írd a `.env` fájlba:
 
 ```dotenv
 TELEGRAM_BOT_TOKEN=123456:ABC...
-TELEGRAM_CHAT_ID=123456789
+TELEGRAM_CHAT_ID=-1001234567890
 ```
 
-A botnak legalább egyszer írj rá (`/start`), különben nem tud neked
-üzenetet küldeni. Az üzenetben a fontos címkék félkövérek, alatta
-WebKincstár, ajánlattétel, dashboard, naptár és termékoldal gombok
-jelennek meg.
+7. Kapcsold be a `config.toml`-ban:
+
+```toml
+[notifiers.telegram]
+enabled = true
+```
+
+Vagy futtasd újra a `python -m allampapir_ertesito setup` parancsot.
+Utána tesztelj:
+
+```powershell
+python -m allampapir_ertesito test
+```
+
+Az üzenetben a fontos címkék félkövérek, alatta WebKincstár,
+ajánlattétel, dashboard, naptár és termékoldal gombok jelennek meg.
 
 ---
 
@@ -307,6 +337,42 @@ Csak a webhookra: `scripts\run_webhook.bat`, vagy közvetlenül:
 A `quick` minden futáskor elküldi az aktuális helyzetet, nem használ
 duplikációvédelmet. A helyi dashboard a `site/index.html` fájlban jön
 létre.
+
+### Csendes, ütemezett futtatás
+
+Ha nem akarsz kattintani, a Windows Feladatütemezővel csendben is
+futtatható:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\register_silent_task.ps1 -Time "09:00"
+```
+
+A feladat `pythonw.exe`-vel fut, ezért:
+
+- nincs konzolablak,
+- nem nyit böngészőt,
+- elküldi a helyzetjelentést a bekapcsolt Discord/Telegram csatornákra,
+- csendben frissíti a helyi dashboardot (`site/index.html`),
+- kalkulátor nélkül generálja a helyi oldalt.
+
+A feladat az aktuális felhasználóhoz jön létre, és jellemzően bejelentkezve
+fut. Ha a laptop alszik, a `StartWhenAvailable` a következő ébredéskor
+pótolja. Azonnali teszt:
+
+```powershell
+Start-ScheduledTask -TaskName "MapPluszNapi"
+```
+
+Törlés:
+
+```powershell
+Unregister-ScheduledTask -TaskName "MapPluszNapi" -Confirm:$false
+```
+
+A teljes dashboardot a feladat nem nyitja meg (az pop-up lenne); ha látni
+akarod, nyisd meg kézzel a `site/index.html` fájlt. Ha a teljes nézetet a
+telefonon is látni szeretnéd, ahhoz GitHub Pages vagy képcsatolmány kell;
+a csendes task csak a szöveges helyzetjelentést küldi.
 
 ## Helyi használat
 
@@ -521,7 +587,8 @@ futás első futásként indul, és összefoglalót küld. Utána ismét normali
   beállításokat tartalmaz, valódi titkot nem.
 - A dashboard workflow nem használ secretet, és nem commitol a repóba.
 - A Discord webhook URL és a Telegram bot token **secret**. Ha bármelyik
-  kikerül, azonnal töröld/újítsd meg.
+  kikerül, azonnal töröld/újítsd meg. Telegramnál a BotFather
+  `/revoke` parancsa ad új tokent.
 - A program a Discord és Telegram hibákban kitakarja a webhook URL-t,
   illetve a bot tokent, hogy ne kerülhessen a nyilvános action logba.
 - A nyilvános repó Action logja nem tartalmazza a kimenő üzenetek teljes
@@ -567,10 +634,12 @@ allampapir_ertesito/
   setup_wizard.py   interaktív helyi beállítás
   summary.py        GitHub Actions összefoglaló
   state.py          állapot és emlékeztetők
+  telegram_util.py  Telegram chat_id felderítés
   util.py           formázás, segédfüggvények
   notifiers/        discord, telegram, ntfy, email, webhook, windows, console
 tests/              unittest tesztek
-scripts/            helyi futtató szkriptek (run_local.bat, run_webhook.bat)
+scripts/            helyi futtató szkriptek (run_local.bat, run_webhook.bat,
+                    register_silent_task.ps1)
 docs/               minta képek és social preview
 .github/workflows/  GitHub Actions: ellenőrzés, tesztek, dashboard
 config.example.toml helyi beállításminta
@@ -590,8 +659,8 @@ python -m unittest discover -s tests -t . -v
 
 A tesztek nem hálózatoznak; hamis adatokkal ellenőrzik a feldolgozást,
 a kétfázisú értesítést, a duplikációvédelmet, a Discord/Telegram payloadot,
-a `.env` betöltést, a dashboardot, a naptárfájlt, a setup segédfüggvényeit
-és az emlékeztetőt. Jelenleg 53 unittest fut.
+a `.env` betöltést, a dashboardot, a naptárfájlt, a setup segédfüggvényeit,
+a Telegram chat-felderítést és az emlékeztetőt. Jelenleg 55 unittest fut.
 
 A GitHubon a `Tesztek` workflow push és pull request esetén automatikusan
 lefut Ubuntu és Windows alatt is.

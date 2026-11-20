@@ -11,6 +11,7 @@ from pathlib import Path
 from .config import ConfigError, find_config, load_config
 from .messages import build_test
 from .notifiers import NotifierManager, build_notifiers
+from .telegram_util import TelegramUtilError, extract_chats, fetch_updates
 
 ENV_KEYS = ("DISCORD_WEBHOOK_URL", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")
 _SECTION = re.compile(r"^\[([^\]]+)\]\s*$")
@@ -141,12 +142,42 @@ def run_setup(config_path: str | None = None) -> int:
                 break
             print("A token formátuma nem megfelelő (pl. 123456:ABC...).")
         if "TELEGRAM_BOT_TOKEN" in values:
-            chat_id = input("Telegram chat_id: ").strip()
-            if chat_id:
-                values["TELEGRAM_CHAT_ID"] = chat_id
+            detected: str = ""
+            try:
+                chats = extract_chats(fetch_updates(values["TELEGRAM_BOT_TOKEN"]))
+            except TelegramUtilError:
+                chats = []
+            if chats:
+                print("Talált Telegram chat-ek:")
+                for chat in chats:
+                    print(f"  ID: {chat['id']}  |  {chat['title']}  ({chat['type']})")
+                target = next(
+                    (
+                        chat
+                        for chat in chats
+                        if chat["type"] in {"group", "supergroup", "channel"}
+                    ),
+                    chats[0],
+                )
+                if _ask_yes(
+                    f"Használjam ezt a chat_id-t: {target['id']} ({target['title']})?",
+                    True,
+                ):
+                    detected = str(target["id"])
+            if detected:
+                values["TELEGRAM_CHAT_ID"] = detected
                 enable_telegram = True
             else:
-                print("A chat_id üres, a Telegram beállítása kimarad.")
+                print(
+                    "Nem találtam automatikusan chatet. Írj a csoportban "
+                    "a botnak, vagy használd a @getidsbot botot."
+                )
+                chat_id = input("Telegram chat_id: ").strip()
+                if chat_id:
+                    values["TELEGRAM_CHAT_ID"] = chat_id
+                    enable_telegram = True
+                else:
+                    print("A chat_id üres, a Telegram beállítása kimarad.")
         else:
             print("A Telegram beállítása kimarad.")
 
