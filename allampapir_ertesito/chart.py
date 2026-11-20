@@ -9,7 +9,7 @@ from .dashboard import DashboardData, _product_label
 from .util import format_date_hu, format_percent, format_rate_range, to_float
 
 _WIDTH = 1200
-_HEIGHT = 840
+_HEIGHT = 920
 _BG = "#0d1117"
 _PANEL = "#161b22"
 _TEXT = "#e6edf3"
@@ -58,7 +58,7 @@ def _history_points(data: DashboardData):
     for row in rows:
         value = to_float(row.ehm)
         if value is not None:
-            points.append((row.valid_from, value))
+            points.append((row.valid_from, value, row.name))
     return points
 
 
@@ -75,7 +75,7 @@ def _draw_ehm_chart(draw, data: DashboardData, box: tuple[int, int, int, int]) -
         )
         return
 
-    values = [value for _, value in points]
+    values = [value for _, value, _ in points]
     low = min(values)
     high = max(values)
     padding = max((high - low) * 0.18, 0.12)
@@ -99,28 +99,54 @@ def _draw_ehm_chart(draw, data: DashboardData, box: tuple[int, int, int, int]) -
         label = format_percent(value) or ""
         draw.text((x0 - 12, y), label, font=_font(15), fill=_MUTED, anchor="rm")
 
+    # Függőleges segédvonalak minden sorozat indulásánál.
+    for index in range(len(points)):
+        x = x_of(index)
+        draw.line((x, y0, x, y1), fill="#21262d", width=1)
+
     # Terület és vonal.
-    coords = [(x_of(i), y_of(value)) for i, (_, value) in enumerate(points)]
+    coords = [(x_of(i), y_of(value)) for i, (_, value, _) in enumerate(points)]
     area = coords + [(coords[-1][0], y1), (coords[0][0], y1)]
     draw.polygon(area, fill=_GREEN_DARK)
     draw.line(coords, fill=_GREEN, width=4, joint="curve")
-    for x, y in coords:
-        draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=_GREEN)
 
-    # Dátumcímkék az első, középső és utolsó ponthoz.
-    indexes = {0, len(points) // 2, len(points) - 1}
-    for index in sorted(indexes):
-        day, _ = points[index]
+    # Pontok, felettük a konkrét EHM-értékkel.
+    for index, (_, value, _) in enumerate(points):
+        x, y = coords[index]
+        draw.ellipse((x - 5, y - 5, x + 5, y + 5), fill=_GREEN)
+        label = format_percent(value) or ""
+        label_y = y - 20
+        if label_y < 118:
+            label_y = y + 24
         draw.text(
-            (x_of(index), y1 + 10),
+            (x, label_y),
+            label,
+            font=_font(14, True),
+            fill=_GREEN,
+            anchor="mm",
+        )
+
+    # Dátum és sorozatnév minden pont alatt.
+    for index, (day, _, name) in enumerate(points):
+        x = x_of(index)
+        draw.text(
+            (x, y1 + 8),
             _short_date(day),
-            font=_font(15),
+            font=_font(13),
             fill=_MUTED,
             anchor="ma",
         )
+        draw.text(
+            (x, y1 + 26),
+            name,
+            font=_font(12),
+            fill=_TEXT,
+            anchor="ma",
+        )
 
+    draw.line((x0, y1, x1, y1), fill=_GRID, width=1)
     draw.text(
-        (x0, y0 - 20),
+        (x0, y0 - 45),
         "EHM az egyes sorozatok indulásakor",
         font=_font(16),
         fill=_MUTED,
@@ -204,22 +230,22 @@ def render_chart(data: DashboardData, path: Path) -> Path:
     )
 
     # Grafikonpanel.
-    draw.rounded_rectangle((48, 100, 1152, 470), radius=14, fill=_PANEL)
-    _draw_ehm_chart(draw, data, (100, 165, 1100, 425))
+    draw.rounded_rectangle((48, 100, 1152, 500), radius=14, fill=_PANEL)
+    _draw_ehm_chart(draw, data, (100, 165, 1100, 395))
 
     # Összehasonlítás.
-    _draw_products(draw, data, 500)
+    _draw_products(draw, data, 550)
 
     # Lábléc.
-    draw.line((64, 790, 1136, 790), fill=_GRID, width=1)
+    draw.line((64, 870, 1136, 870), fill=_GRID, width=1)
     draw.text(
-        (64, 802),
+        (64, 882),
         "Forrás: ÁKK nyilvános adatai. Nem befektetési tanács.",
         font=_font(14),
         fill=_MUTED,
     )
     draw.text(
-        (1136, 802),
+        (1136, 882),
         "MÁP+ Watcher",
         font=_font(14, True),
         fill=_MUTED,
