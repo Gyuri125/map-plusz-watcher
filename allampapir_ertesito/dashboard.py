@@ -746,6 +746,10 @@ tr:last-child td { border-bottom: 0; }
 tr.map td { background: rgba(46, 204, 113, .06); }
 .badge { display: inline-block; border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; font-size: 11px; color: var(--muted); white-space: nowrap; }
 .chart svg { width: 100%; height: auto; display: block; }
+@media (max-width: 720px) {
+  .chart { overflow-x: auto; }
+  .chart svg { min-width: 760px; }
+}
 .calc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .calc label { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 12px; }
 .calc input { width: 100%; background: var(--panel-2); border: 1px solid var(--border); border-radius: 5px; color: var(--text); padding: 10px; font-size: 15px; }
