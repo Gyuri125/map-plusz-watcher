@@ -15,7 +15,7 @@ from pathlib import Path
 
 from . import __version__
 from .akk import AkkClient, AkkError
-from .config import Config, ConfigError, load_config
+from .config import Config, ConfigError, find_config, load_config
 from .dashboard import DashboardError, build_data, write_dashboard
 from .messages import build_status, build_test
 from .models import CheckOutcome, Offering, RetailSeries, SeriesInfo
@@ -377,8 +377,25 @@ def run_quick(
     return 0
 
 
-def run_telegram_chat_id(config: Config) -> int:
-    token = config.telegram.bot_token
+def run_telegram_chat_id(config_path: str | None = None) -> int:
+    token = ""
+    timeout = 30
+    try:
+        path = find_config(config_path)
+    except ConfigError:
+        path = None
+    if path is not None:
+        try:
+            config = load_config(path)
+            token = config.telegram.bot_token
+            timeout = config.app.http_timeout_seconds
+        except ConfigError:
+            # Ha a config még hiányos (pl. üres Discord webhook), a .env
+            # betöltése után az env változóból még meg tudjuk szerezni.
+            token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+
+    if not token:
+        token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     if not token:
         token = getpass.getpass("Telegram bot token (nem látszik): ").strip()
     if not token:
@@ -386,7 +403,7 @@ def run_telegram_chat_id(config: Config) -> int:
         return 1
 
     try:
-        payload = fetch_updates(token, timeout=config.app.http_timeout_seconds)
+        payload = fetch_updates(token, timeout=timeout)
     except TelegramUtilError as exc:
         print(f"Telegram hiba: {exc}", file=sys.stderr)
         return 1
@@ -606,6 +623,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_init(args)
     if args.command == "setup":
         return run_setup(args.config)
+    if args.command == "telegram-chat-id":
+        return run_telegram_chat_id(args.config)
 
     try:
         config = load_config(args.config)
@@ -640,8 +659,6 @@ def main(argv: list[str] | None = None) -> int:
                 show_calculator=not args.no_calculator,
                 output=args.output,
             )
-        if args.command == "telegram-chat-id":
-            return run_telegram_chat_id(config)
         parser.error(f"Ismeretlen parancs: {args.command}")
         return 2
     except ConfigError as exc:
